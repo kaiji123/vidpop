@@ -22,8 +22,10 @@ const WINDOW = 8; // segments per prompt — keeps each call well inside Nano's 
 export const SYSTEM_PROMPT = `You scan short-video transcripts for moments a viewer may want to look up without leaving the video.
 
 Return two kinds of moments:
-- "claim": a specific, checkable factual assertion (statistics, records, scientific or historical facts, news, announcements, casting news). NOT opinions, jokes, feelings, greetings, or calls to action.
+- "claim": any statement of fact that sources could confirm or refute: statistics, records, superlatives ("the hardest", "the first"), maths, science, history, health, news, announcements, casting news. Include claims that are obviously false or said casually. Hedges like "I think", "actually", "apparently" or "I heard" do NOT make a factual statement an opinion: "I think 2 + 2 is 5" is a claim. Skip only pure taste or feelings ("I love this", "it was amazing"), greetings, jokes that assert nothing, and calls to action.
 - "product": a specific product, brand, model, or paid service someone could buy or book.
+
+Return every distinct claim, even several from one line. If a claim runs across lines, use the line where it starts. If a later line only repeats an earlier claim, return it once.
 
 For each moment give:
 - segment: the [number] of the transcript line it appears in

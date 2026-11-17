@@ -1,6 +1,14 @@
 import { useRef, type ReactNode, type RefObject } from 'react';
 import { fmt } from '../ai/extract';
-import type { Clip, Moment } from '../types';
+import type { Clip, Moment, Verdict, Verification } from '../types';
+
+// Short popup copy once the background fact check is done.
+const POPUP_VERDICT: Record<Verdict, string> = {
+  supported: '✓ Sources agree',
+  contradicted: '✕ Sources disagree',
+  mixed: '≈ Sources are mixed',
+  insufficient: '? Not enough evidence',
+};
 
 interface Props {
   clip: Clip;
@@ -11,6 +19,8 @@ interface Props {
   moments: Moment[];
   scanning: boolean;
   popup?: Moment;
+  /** Pre-generated fact check for the popup's claim, once ready. */
+  popupVerdict?: Verification;
   openId?: string;
   sheet?: ReactNode;
   onOpen: (m: Moment) => void;
@@ -79,10 +89,14 @@ export function Phone(p: Props) {
             <button className="popup-x" onClick={() => p.onDismiss(p.popup!)} aria-label="Dismiss">×</button>
             {p.popup.kind === 'claim' ? (
               <>
-                <span className="popup-kicker">Is this claim true?</span>
+                {p.popupVerdict ? (
+                  <span className={`popup-kicker verdict-${p.popupVerdict.verdict}`}>{POPUP_VERDICT[p.popupVerdict.verdict]}</span>
+                ) : (
+                  <span className="popup-kicker">Is this claim true?</span>
+                )}
                 <strong>{p.popup.label}</strong>
                 <span className="popup-sub">Check sources without leaving the video</span>
-                <button className="popup-cta" onClick={() => p.onOpen(p.popup!)}>Verify</button>
+                <button className="popup-cta" onClick={() => p.onOpen(p.popup!)}>{p.popupVerdict ? 'Sources' : 'Verify'}</button>
               </>
             ) : (
               <>

@@ -3,12 +3,17 @@ import { extractMoments } from './ai/extract';
 import { createNanoSession, nanoAvailability, type NanoAvailability } from './ai/nano';
 import { transcribe, TRANSCRIBE_MODEL } from './ai/transcribe';
 import { cloudBackend } from './ai/config';
+import { verifyMoment } from './ai/verify';
 import { Phone } from './components/Phone';
 import { SidePanel } from './components/SidePanel';
 import { DiscoverSheet, VerifySheet } from './components/Sheets';
 import type { Clip, Engine, ExtractionResult, LogEntry, Moment, Segment, Verification } from './types';
 
 type ModeFilter = 'verify' | 'discover' | 'all';
+
+// Background fact checks per clip: enough for a short video, gentle on Search grounding quota.
+const PREVERIFY_MAX = 20;
+const PREVERIFY_CONCURRENCY = 2;
 
 async function loadClips(): Promise<Clip[]> {
   const index: { id: string }[] = await fetch('/clips/index.json').then((r) => r.json());
@@ -31,10 +36,59 @@ export default function App() {
   const [verifications, setVerifications] = useState<Record<string, Verification>>({});
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const clipsRef = useRef(clips);
+  clipsRef.current = clips;
 
   const log = useCallback((level: LogEntry['level'], msg: string, engine?: Engine) => {
     setLogs((l) => [{ at: Date.now(), level, msg, engine }, ...l].slice(0, 200));
   }, []);
+
+  // Fact checks are pre-generated: every claim is verified in the background as soon as a clip
+  // is scanned, so opening it is instant. One shared promise per claim means a sheet opened
+  // mid-check waits for that check instead of starting a second one.
+  // Moment ids repeat across clips and rescans, so key by clip + segment + claim text.
+  const vkey = (clipId: string, m: Moment) => `${clipId}|${m.segmentIndex}|${m.detail}`;
+  const inflight = useRef(new Map<string, Promise<Verification>>());
+  const getVerification = useCallback(
+    (clipId: string, m: Moment) => {
+      const k = vkey(clipId, m);
+      // Two lines either side, so "diamond isn't the hardest… wood is" is read as one thought.
+      const segs = clipsRef.current.find((c) => c.id === clipId)?.segments ?? [];
+      const context = segs.slice(Math.max(0, m.segmentIndex - 2), m.segmentIndex + 3).map((s) => s.text).join(' ');
+      let p = inflight.current.get(k);
+      if (!p) {
+        log('info', `Checking “${m.label}” with Gemini + Google Search…`);
+        p = verifyMoment(m, undefined, context).then(
+          (v) => {
+            setVerifications((x) => ({ ...x, [k]: v }));
+            log('ok', `Verdict for “${m.label}”: ${v.verdict} · ${v.sources.length} sources · ${v.ms} ms`, v.engine);
+            return v;
+          },
+          (e: Error) => {
+            inflight.current.delete(k); // let the sheet retry
+            log('error', `Verification of “${m.label}” failed: ${e.message}`);
+            throw e;
+          },
+        );
+        inflight.current.set(k, p);
+      }
+      return p;
+    },
+    [log],
+  );
+  const queued = useRef(new WeakSet<ExtractionResult>());
+  useEffect(() => {
+    for (const [clipId, ex] of Object.entries(extractions)) {
+      if (queued.current.has(ex)) continue;
+      queued.current.add(ex);
+      const claims = ex.moments.filter((m) => m.kind === 'claim').slice(0, PREVERIFY_MAX);
+      let next = 0;
+      const worker = async () => {
+        while (next < claims.length) await getVerification(clipId, claims[next++]).catch(() => {});
+      };
+      for (let i = 0; i < PREVERIFY_CONCURRENCY; i++) worker();
+    }
+  }, [extractions, getVerification]);
 
   useEffect(() => {
     loadClips()
@@ -226,11 +280,10 @@ export default function App() {
     openMoment.kind === 'claim' ? (
       <VerifySheet
         moment={openMoment}
-        cached={verifications[openMoment.id]}
-        onResult={(v) => setVerifications((x) => ({ ...x, [openMoment.id]: v }))}
+        cached={clip && verifications[vkey(clip.id, openMoment)]}
+        load={() => getVerification(clip!.id, openMoment)}
         onClose={closeSheet}
         onSeek={seek}
-        onLog={log}
       />
     ) : (
       <DiscoverSheet moment={openMoment} onClose={closeSheet} onSeek={seek} />
@@ -276,6 +329,7 @@ export default function App() {
             moments={moments}
             scanning={scanning}
             popup={popup}
+            popupVerdict={popup && clip ? verifications[vkey(clip.id, popup)] : undefined}
             openId={openId}
             sheet={sheet}
             onOpen={open}

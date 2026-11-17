@@ -61,7 +61,7 @@ export function SidePanel(p: Props) {
           <li>
             <span className="step">3</span>
             <div>
-              <strong>Verify · cloud, on tap</strong>
+              <strong>Verify · cloud, in the background</strong>
               <span className="muted">
                 {cloudBackend === 'firebase' && `Firebase AI Logic · ${CLOUD_MODEL} + Google Search`}
                 {cloudBackend === 'gemini-api' && `Gemini API (dev key) · ${CLOUD_MODEL} + Google Search`}

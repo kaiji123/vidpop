@@ -13,11 +13,13 @@ const VERDICTS: Record<string, Verdict> = {
   INSUFFICIENT: 'insufficient',
 };
 
-export function verifyPrompt(m: Moment): string {
+export function verifyPrompt(m: Moment, context?: string): string {
   return `You are a neutral, careful fact-checking assistant. A viewer tapped a claim while watching a short video.
 
 Claim: "${m.detail}"
 Exact words spoken in the video: "${m.quote}"
+${context ? `Surrounding speech, for context: "${context}"\n` : ''}
+Judge the claim as an ordinary viewer would understand it in context, not on a technicality. If it is only true in a narrow or technical sense while what the speaker means is false (or the reverse), answer MIXED and explain both.
 
 Search Google for current, reputable, attributable sources (official bodies, peer-reviewed research, established news organisations, recognised fact-checkers). Weigh what they say, then answer in EXACTLY this format:
 
@@ -101,21 +103,22 @@ async function groundedOnce(model: string, prompt: string, signal?: AbortSignal)
   return { text: res.text, meta: res.groundingMetadata as GroundingMetadata | undefined, engine: 'gemini-api' };
 }
 
-async function groundedCall(m: Moment, signal?: AbortSignal) {
+async function groundedCall(m: Moment, signal?: AbortSignal, context?: string) {
   if (!getFirebaseAI() && !GEMINI_API_KEY) return undefined;
-  return withFallback(VERIFY_MODELS, (model) => groundedOnce(model, verifyPrompt(m), signal), { signal });
+  return withFallback(VERIFY_MODELS, (model) => groundedOnce(model, verifyPrompt(m, context), signal), { signal });
 }
 
 const QUOTA_NOTICE =
   'Live Google Search checks are not available on this project yet: Grounding with Google Search needs the Blaze (pay-as-you-go) plan, which includes 5,000 free searches a month. Showing the offline demo result instead.';
 
-export async function verifyMoment(m: Moment, signal?: AbortSignal): Promise<Verification> {
+/** `context`: nearby transcript lines, so the claim is judged in the sense the speaker meant. */
+export async function verifyMoment(m: Moment, signal?: AbortSignal, context?: string): Promise<Verification> {
   const t0 = performance.now();
   const factChecksP = searchFactChecks(m.query, signal).catch(() => [] as FactCheck[]);
   let grounded: (Grounded & { model: string }) | undefined;
   let notice: string | undefined;
   try {
-    grounded = await groundedCall(m, signal);
+    grounded = await groundedCall(m, signal, context);
   } catch (e) {
     if (!(e instanceof QuotaError)) throw e;
     notice = QUOTA_NOTICE;
