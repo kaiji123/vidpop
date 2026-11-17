@@ -179,10 +179,20 @@ export default function App() {
     if (v.paused) v.play();
     else v.pause();
   };
+  // Pause while a panel is open so viewers can read; resume on close only if it was playing.
+  const resumeOnClose = useRef(false);
   const open = (m: Moment) => {
+    const v = videoRef.current;
+    if (!openId) resumeOnClose.current = Boolean(v && !v.paused);
+    v?.pause();
     setOpenId(m.id);
     setDismissed((d) => new Set(d).add(m.id));
     log('info', `Opened ${m.kind} at ${m.start.toFixed(1)}s: ${m.label}`);
+  };
+  const closeSheet = () => {
+    setOpenId(undefined);
+    if (resumeOnClose.current) videoRef.current?.play();
+    resumeOnClose.current = false;
   };
   const dismiss = (m: Moment) => setDismissed((d) => new Set(d).add(m.id));
 
@@ -191,6 +201,7 @@ export default function App() {
     setClipId(c.id);
     setMode(c.suggestedMode);
     setOpenId(undefined);
+    resumeOnClose.current = false;
     setDismissed(new Set());
     setTime(0);
     setPlaying(false);
@@ -217,12 +228,12 @@ export default function App() {
         moment={openMoment}
         cached={verifications[openMoment.id]}
         onResult={(v) => setVerifications((x) => ({ ...x, [openMoment.id]: v }))}
-        onClose={() => setOpenId(undefined)}
+        onClose={closeSheet}
         onSeek={seek}
         onLog={log}
       />
     ) : (
-      <DiscoverSheet moment={openMoment} onClose={() => setOpenId(undefined)} onSeek={seek} />
+      <DiscoverSheet moment={openMoment} onClose={closeSheet} onSeek={seek} />
     )
   ) : undefined;
 

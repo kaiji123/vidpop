@@ -190,3 +190,13 @@ h1, h2, h3, h4 { margin: 0; }
 .status-overlay.error strong { color: var(--bad); }
 
 .notice { font-size: 12px; line-height: 1.45; color: var(--mixed); background: #fbbf2414; border: 1px solid #fbbf2433; border-radius: 10px; padding: 8px 10px; margin: 0 0 10px; }
+
+.btn-google { display: flex; justify-content: center; width: 100%; margin: 12px 0; padding: 10px 14px; background: #fff; color: #1f1f1f; border-color: #fff; font-size: 14px; }
+.btn-google:hover { background: #f1f3f4; }
+.g-mark { font-weight: 800; background: conic-gradient(from -45deg, #ea4335 0 25%, #4285f4 0 50%, #34a853 0 75%, #fbbc05 0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.why { margin-top: 10px; }
+.why summary { cursor: pointer; font-weight: 700; font-size: 13px; padding: 6px 0; list-style: none; }
+.why summary::-webkit-details-marker { display: none; }
+.why summary::before { content: '▸ '; color: var(--muted); }
+.why[open] summary::before { content: '▾ '; }
+.why .claim { font-size: 13px; color: var(--muted); font-weight: 500; margin: 6px 0; }

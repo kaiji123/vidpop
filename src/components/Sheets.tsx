@@ -58,6 +58,8 @@ export function VerifySheet({ moment, cached, onResult, onClose, onSeek, onLog }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moment.id]);
 
+  const searchQuery = result?.searchQueries[0] ?? moment.query;
+
   return (
     <section className="sheet" aria-label="Verify claim">
       <header className="sheet-head">
@@ -66,17 +68,21 @@ export function VerifySheet({ moment, cached, onResult, onClose, onSeek, onLog }
         <button className="icon-btn" onClick={onClose} aria-label="Close">×</button>
       </header>
 
-      <button className="quote" onClick={() => onSeek(moment.start)} title="Jump to this moment">
+      <button className="quote" onClick={() => onSeek(moment.start)} title="Replay this moment">
         <span className="ts">{fmt(moment.start)}</span>“{moment.quote}”
       </button>
-      <p className="claim">{moment.detail}</p>
+
+      {/* Always one tap away, even before the AI answer arrives. */}
+      <a className="btn btn-google" href={googleSearchUrl(searchQuery)} target="_blank" rel="noopener noreferrer">
+        <span className="g-mark" aria-hidden>G</span> Search this claim on Google ↗
+      </a>
 
       {!result && !error && (
         <div className="loading">
           <div className="spinner" />
           <div>
             <strong>Checking sources…</strong>
-            <p className="muted">Gemini is searching Google for evidence. The video keeps playing.</p>
+            <p className="muted">Gemini is searching Google for evidence.</p>
           </div>
         </div>
       )}
@@ -93,51 +99,54 @@ export function VerifySheet({ moment, cached, onResult, onClose, onSeek, onLog }
               <div className="verdict-summary">{result.summary}</div>
             </div>
           </div>
-          <p className="explanation">{result.explanation}</p>
 
-          {result.factChecks.length > 0 && (
-            <>
-              <h4>Published fact-checks</h4>
+          <details className="why">
+            <summary>
+              Why? <span className="muted">· {result.sources.length + result.factChecks.length} source{result.sources.length + result.factChecks.length === 1 ? '' : 's'}</span>
+            </summary>
+            <p className="claim">Claim checked: {moment.detail}</p>
+            <p className="explanation">{result.explanation}</p>
+
+            {result.factChecks.length > 0 && (
+              <>
+                <h4>Published fact-checks</h4>
+                <ul className="sources">
+                  {result.factChecks.map((f, i) => (
+                    <li key={i}>
+                      <a href={f.url} target="_blank" rel="noopener noreferrer">
+                        <span className="src-title">{f.publisher}: “{f.rating}”</span>
+                        <span className="src-meta">{[formatDate(f.reviewDate), f.claimant && `Claim by ${f.claimant}`].filter(Boolean).join(' · ')}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+
+            <h4>Sources</h4>
+            {result.sources.length === 0 ? (
+              <p className="muted">No web sources were returned. Treat this result with caution.</p>
+            ) : (
               <ul className="sources">
-                {result.factChecks.map((f, i) => (
-                  <li key={i}>
-                    <a href={f.url} target="_blank" rel="noopener noreferrer">
-                      <span className="src-title">{f.publisher}: “{f.rating}”</span>
-                      <span className="src-meta">{[formatDate(f.reviewDate), f.claimant && `Claim by ${f.claimant}`].filter(Boolean).join(' · ')}</span>
+                {result.sources.map((s) => (
+                  <li key={s.uri}>
+                    <a href={s.uri} target="_blank" rel="noopener noreferrer">
+                      <img src={favicon(s.domain)} alt="" width={16} height={16} />
+                      <span className="src-title">{s.title}</span>
+                      <span className="src-meta">{s.domain}</span>
                     </a>
                   </li>
                 ))}
               </ul>
-            </>
-          )}
+            )}
+          </details>
 
-          <h4>Sources {result.sources.length > 0 && <span className="muted">({result.sources.length})</span>}</h4>
-          {result.sources.length === 0 ? (
-            <p className="muted">No web sources were returned. Treat this result with caution.</p>
-          ) : (
-            <ul className="sources">
-              {result.sources.map((s) => (
-                <li key={s.uri}>
-                  <a href={s.uri} target="_blank" rel="noopener noreferrer">
-                    <img src={favicon(s.domain)} alt="" width={16} height={16} />
-                    <span className="src-title">{s.title}</span>
-                    <span className="src-meta">{s.domain}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-
+          {/* Google requires the Search Suggestions chip to be shown alongside grounded answers. */}
           {result.searchEntryPointHtml && <SearchEntryPoint html={result.searchEntryPointHtml} />}
 
-          <div className="sheet-actions">
-            <a className="btn btn-primary" href={googleSearchUrl(result.searchQueries[0] ?? moment.query)} target="_blank" rel="noopener noreferrer">
-              Open in Google Search ↗
-            </a>
-          </div>
           <footer className="sheet-foot">
             <EngineBadge engine={result.engine} />
-            <span>{result.model && `${result.model} · `}AI summary of search results · checked {new Date(result.checkedAt).toLocaleTimeString()} · {result.ms} ms</span>
+            <span>{result.model && `${result.model} · `}AI summary of search results · {result.ms} ms</span>
           </footer>
         </>
       )}
