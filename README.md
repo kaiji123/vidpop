@@ -2,7 +2,10 @@
 
 **Search, discover and verify information at the exact moment it appears in a video.**
 
-Built for Google's #BuildHybridAI challenge. Gemini Nano scans the video transcript on-device and finds checkable claims and mentioned products. VidPop then shows a small, dismissible card at the exact timestamp. When the viewer taps it, cloud Gemini with Grounding with Google Search returns a cited answer inside the video.
+> **Hackathon entry:** built for Google's **#BuildHybridAI 2026** hackathon on Devpost (submission deadline 30 November 2026).
+> **Live demo:** https://vidpop-ee91f.web.app
+
+Gemini Nano scans the video transcript on-device and finds checkable claims and mentioned products. VidPop then shows a small, dismissible card at the exact timestamp. Every claim is fact-checked in the background by cloud Gemini with Grounding with Google Search, so the card already shows its verdict, and tapping it opens a cited answer inside the video.
 
 ```
 transcript (timestamped) ──► Gemini Nano, on-device ──► moments + segment index

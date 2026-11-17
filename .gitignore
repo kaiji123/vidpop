@@ -19,3 +19,6 @@ video/assets/rec-upload.*
 video/assets/audio-you.wav
 video/assets/*.wav
 video/assets/*.mp4
+
+# Firebase deploy cache
+.firebase/
