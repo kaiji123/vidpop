@@ -1,0 +1,51 @@
+{
+  "id": "myth-facts",
+  "title": "4 facts that sound fake",
+  "creator": "@dailyfactdrop",
+  "suggestedMode": "verify",
+  "src": "/clips/myth-facts.mp4",
+  "duration": 37.841,
+  "segments": [
+    {
+      "start": 0.6,
+      "end": 4.855,
+      "text": "Okay, here are four facts that sound fake, but people swear they are true."
+    },
+    {
+      "start": 5.305,
+      "end": 11.042,
+      "text": "First up. The Great Wall of China is the only human-made structure you can see from space with your naked eye."
+    },
+    {
+      "start": 11.492,
+      "end": 14.352,
+      "text": "Wild, right? The next one is about Paris."
+    },
+    {
+      "start": 14.802,
+      "end": 20.989,
+      "text": "The Eiffel Tower actually grows about fifteen centimetres taller in the summer, because the iron expands in the heat."
+    },
+    {
+      "start": 21.439,
+      "end": 24.312,
+      "text": "Number three, and this one honestly changed my life."
+    },
+    {
+      "start": 24.762,
+      "end": 28.574,
+      "text": "Scientists have proven that humans only use ten percent of their brains."
+    },
+    {
+      "start": 29.024,
+      "end": 35.697,
+      "text": "And finally, archaeologists found pots of honey in ancient Egyptian tombs that were still edible after three thousand years."
+    },
+    {
+      "start": 36.147,
+      "end": 37.391,
+      "text": "Follow for part two!"
+    }
+  ],
+  "synthetic": true
+}

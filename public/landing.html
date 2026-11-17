@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Demo advertiser</title>
+<style>
+  body { margin: 0; font: 16px/1.5 system-ui, sans-serif; background: #f4f4f6; color: #16161d; display: grid; place-items: center; min-height: 100vh; }
+  main { max-width: 440px; margin: 16px; background: #fff; border-radius: 16px; padding: 28px; box-shadow: 0 8px 30px #0001; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; background: #fff3cd; color: #7a5b00; padding: 3px 8px; border-radius: 6px; }
+  h1 { font-size: 24px; margin: 12px 0 4px; }
+  p { color: #555; }
+  a { color: #c2185b; }
+</style>
+</head>
+<body>
+<main>
+  <span class="tag">Demo advertiser landing page</span>
+  <h1 id="adv">Advertiser</h1>
+  <p>You arrived here from a <strong>sponsored</strong> VidPop card for <strong id="q"></strong>.</p>
+  <p>This page stands in for a real advertiser's site. In production, the advertiser receives a click with the product context only, never the viewer's identity or watch history.</p>
+  <p><a href="javascript:history.back()">← Back to the video</a></p>
+</main>
+<script>
+  const p = new URLSearchParams(location.search);
+  const names = { shutterhaus: 'ShutterHaus', raillink: 'RailLink Travel', voltpack: 'VoltPack' };
+  document.getElementById('adv').textContent = names[p.get('ad')] || 'Demo advertiser';
+  document.getElementById('q').textContent = p.get('q') || 'a product';
+</script>
+</body>
+</html>

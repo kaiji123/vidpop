@@ -1,0 +1,41 @@
+{
+  "id": "tokyo-day1",
+  "title": "Day 1 in Tokyo",
+  "creator": "@wanderwithmika",
+  "suggestedMode": "discover",
+  "src": "/clips/tokyo-day1.mp4",
+  "duration": 30.649,
+  "segments": [
+    {
+      "start": 0.6,
+      "end": 3.495,
+      "text": "Day one in Tokyo, and I am already obsessed."
+    },
+    {
+      "start": 3.945,
+      "end": 10.699,
+      "text": "I shot everything today on a compact Fujifilm X100 series camera, and the colours straight out of camera are unreal."
+    },
+    {
+      "start": 11.149,
+      "end": 15.757,
+      "text": "We picked up a seven day Japan Rail Pass, which saved us a ton on the bullet train."
+    },
+    {
+      "start": 16.207,
+      "end": 21.391,
+      "text": "Pro tip: pack a portable power bank, because you will be using maps on your phone all day."
+    },
+    {
+      "start": 21.841,
+      "end": 27.085,
+      "text": "Also, fun fact. Tokyo is the most populous metropolitan area in the world."
+    },
+    {
+      "start": 27.535,
+      "end": 30.199,
+      "text": "Tomorrow we are heading to Kyoto. See you there!"
+    }
+  ],
+  "synthetic": true
+}
