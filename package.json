@@ -6,7 +6,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "clips": "node scripts/make-clips.mjs"
+    "clips": "node scripts/make-clips.mjs",
+    "deploy": "npm run build && npx -y firebase-tools deploy --only hosting"
   },
   "description": "VidPop — search, discover and verify information at the exact moment it appears in a video (Gemini Nano + Gemini with Google Search grounding).",
   "dependencies": {

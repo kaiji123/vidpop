@@ -34,6 +34,28 @@ It runs with **no keys at all**. Extraction falls back to a heuristic and verifi
 | **Fact Check Tools API** | Set `VITE_FACTCHECK_API_KEY` to add published fact-checks with publisher and review dates. |
 | Cloud model | `VITE_GEMINI_MODEL` (default `gemini-3.6-flash`). |
 
+## Deploy (Firebase Hosting, no backend)
+
+The whole app is static. The browser talks to Gemini through Firebase AI Logic, so there's no server to run and no secret key in the bundle.
+
+1. In the [Firebase console](https://console.firebase.google.com), create a project, enable **AI Logic** with the Gemini Developer API, and register a **Web app**. Put its config in `.env` (`VITE_FIREBASE_*`).
+2. **Before sharing the URL**, enable **App Check** (reCAPTCHA Enterprise) for AI Logic. Without it, anyone can use your Gemini quota from your public config.
+3. Run these once:
+   ```bash
+   npx firebase-tools login
+   npx firebase-tools use --add      # pick your project
+   ```
+4. Then, every time you deploy:
+   ```bash
+   npm run deploy                    # build, then firebase deploy --only hosting
+   ```
+
+Notes:
+- `VITE_GEMINI_API_KEY` is **dev-only**. Production builds strip it out (checked by building with a test key and searching the bundle).
+- If you use the Fact Check API key, restrict it to your hosting domain under *APIs & Services → Credentials → HTTP referrers*.
+- Transcripts for demo clips ship as static JSON in `public/clips/`, so a live demo never waits on transcription.
+- Gemini Nano is used only when the visitor's Chrome has the built-in model. Everyone else gets the cloud model, which is shown in the UI, so the deployed site works in any browser.
+
 ## How it works
 
 - **`src/ai/extract.ts`** finds moments. It tries Firebase hybrid, then the Chrome Prompt API, then the Gemini API, then the heuristic, in that order. The transcript goes in as numbered lines in windows of 8. The model returns JSON (constrained by `responseConstraint` or `responseSchema`) with a **segment index**, not a time. The timestamp is then taken from the transcript, so popups always land on the right moment.
