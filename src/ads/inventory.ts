@@ -1,49 +1,40 @@
-// Discover Mode: a tiny, fictional sponsored inventory matched to product moments.
-// Advertisers are made up for the demo; landing pages are local mock pages.
+// Discover Mode: sponsored products matched to product moments.
+// The catalog (./catalog.ts) is fictional: 120 demo products from 20 made-up stores.
 // Rules: sponsored cards are always labelled, never shown for claims, and never
-// shown on political content.
+// shown on political content. Matching uses only the moment's text, never the viewer.
 import type { Moment } from '../types';
+import { PRODUCTS, type Product } from './catalog';
 
-export interface Offer {
-  id: string;
-  advertiser: string;
-  headline: string;
-  body: string;
-  cta: string;
-  match: RegExp;
+const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Word-boundary match, allowing a plural ("headphone" ↔ "headphones").
+const patterns = new Map(
+  PRODUCTS.flatMap((p) => p.keywords).map((k) => [k, new RegExp(`\\b${escape(k)}(?:e?s)?\\b`, 'i')]),
+);
+
+function score(p: Product, focus: string, quote: string): number {
+  let s = 0;
+  for (const k of p.keywords) {
+    const re = patterns.get(k)!;
+    // Multi-word keywords are more specific, so they count for more.
+    const weight = k.split(/\s+/).length;
+    if (re.test(focus)) s += 3 * weight;
+    else if (re.test(quote)) s += weight;
+  }
+  return s;
 }
 
-export const OFFERS: Offer[] = [
-  {
-    id: 'shutterhaus',
-    advertiser: 'ShutterHaus',
-    headline: 'Interested in this camera?',
-    body: 'Compare compact cameras like the one in this video, with free next-day delivery.',
-    cta: 'View product',
-    match: /camera|x100|lens|fujifilm|sony|canon|nikon/i,
-  },
-  {
-    id: 'raillink',
-    advertiser: 'RailLink Travel',
-    headline: 'Planning trains in Japan?',
-    body: 'Rail passes and reserved seats, delivered digitally before you fly.',
-    cta: 'See passes',
-    match: /rail pass|jr pass|bullet train|shinkansen/i,
-  },
-  {
-    id: 'voltpack',
-    advertiser: 'VoltPack',
-    headline: 'Need a power bank for the trip?',
-    body: 'Slim 10,000 mAh chargers that are airline-safe.',
-    cta: 'Shop chargers',
-    match: /power bank|charger|battery/i,
-  },
-];
-
-export function offerFor(m: Moment): Offer | undefined {
-  if (m.kind !== 'product' || m.category === 'politics') return undefined;
-  return OFFERS.find((o) => o.match.test(`${m.label} ${m.detail} ${m.quote}`));
+/** Best-matching sponsored products for a moment, most relevant first. */
+export function offersFor(m: Moment, limit = 3): Product[] {
+  if (m.kind !== 'product' || m.category === 'politics') return [];
+  const focus = `${m.label} ${m.detail} ${m.query}`;
+  const ranked = PRODUCTS.map((p) => ({ p, s: score(p, focus, m.quote) }))
+    .filter((x) => x.s >= 3) // at least one keyword in the product itself, not just nearby speech
+    .sort((a, b) => b.s - a.s || b.p.reviews - a.p.reviews);
+  // Alternatives must be nearly as relevant as the best match, so a passing brand
+  // word doesn't drag in an unrelated category.
+  const top = ranked[0]?.s ?? 0;
+  return ranked.filter((x) => x.s * 2 >= top).slice(0, limit).map((x) => x.p);
 }
 
-export const landingUrl = (o: Offer, m: Moment) =>
-  `/landing.html?ad=${o.id}&q=${encodeURIComponent(m.detail)}`;
+export const landingUrl = (p: Product, m: Moment) =>
+  `/landing.html?p=${p.id}&q=${encodeURIComponent(m.detail)}`;

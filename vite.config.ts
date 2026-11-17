@@ -4,4 +4,6 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   server: { port: 5173 },
+  // Second page: the demo advertiser store that sponsored cards link to.
+  build: { rollupOptions: { input: { main: 'index.html', landing: 'landing.html' } } },
 });

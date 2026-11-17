@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { verifyMoment, googleSearchUrl } from '../ai/verify';
+import { googleSearchUrl } from '../ai/verify';
 import { fmt } from '../ai/extract';
-import { offerFor, landingUrl } from '../ads/inventory';
+import { offersFor, landingUrl } from '../ads/inventory';
+import { formatPrice, type Product } from '../ads/catalog';
 import { SearchEntryPoint } from './SearchEntryPoint';
 import { EngineBadge } from './EngineBadge';
-import type { Engine, Moment, Verdict, Verification } from '../types';
+import type { Moment, Verdict, Verification } from '../types';
 
 const VERDICT_COPY: Record<Verdict, { label: string; icon: string }> = {
   supported: { label: 'Supported by sources', icon: '✓' },
@@ -28,12 +29,13 @@ interface SheetProps {
 }
 
 interface VerifyProps extends SheetProps {
+  /** Pre-generated result, if the background check already finished. */
   cached?: Verification;
-  onResult: (v: Verification) => void;
-  onLog: (level: 'info' | 'ok' | 'warn' | 'error', msg: string, engine?: Engine) => void;
+  /** Joins the background check for this claim, or starts one. */
+  load: () => Promise<Verification>;
 }
 
-export function VerifySheet({ moment, cached, onResult, onClose, onSeek, onLog }: VerifyProps) {
+export function VerifySheet({ moment, cached, load, onClose, onSeek }: VerifyProps) {
   const [result, setResult] = useState<Verification | undefined>(cached);
   const [error, setError] = useState<string>();
 
@@ -41,20 +43,14 @@ export function VerifySheet({ moment, cached, onResult, onClose, onSeek, onLog }
     setResult(cached);
     setError(undefined);
     if (cached) return;
-    const ctrl = new AbortController();
-    onLog('info', `Verifying “${moment.label}” with Gemini + Google Search…`);
-    verifyMoment(moment, ctrl.signal)
-      .then((v) => {
-        setResult(v);
-        onResult(v);
-        onLog('ok', `Verdict: ${v.verdict} · ${v.sources.length} sources · ${v.ms} ms`, v.engine);
-      })
-      .catch((e: Error) => {
-        if (ctrl.signal.aborted) return;
-        setError(e.message);
-        onLog('error', `Verification failed: ${e.message}`);
-      });
-    return () => ctrl.abort();
+    // The check is shared with the background queue, so closing the sheet doesn't cancel it.
+    let live = true;
+    load()
+      .then((v) => live && setResult(v))
+      .catch((e: Error) => live && setError(e.message));
+    return () => {
+      live = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moment.id]);
 
@@ -155,7 +151,7 @@ export function VerifySheet({ moment, cached, onResult, onClose, onSeek, onLog }
 }
 
 export function DiscoverSheet({ moment, onClose, onSeek }: SheetProps) {
-  const offer = offerFor(moment);
+  const [offer, ...more] = offersFor(moment);
   return (
     <section className="sheet" aria-label="Discover product">
       <header className="sheet-head">
@@ -180,12 +176,34 @@ export function DiscoverSheet({ moment, onClose, onSeek }: SheetProps) {
       </div>
 
       {offer ? (
-        <a className="offer" href={landingUrl(offer, moment)} target="_blank" rel="noopener noreferrer sponsored">
-          <span className="sponsored-tag">Sponsored · {offer.advertiser}</span>
-          <strong>{offer.headline}</strong>
-          <span>{offer.body}</span>
-          <span className="offer-cta">{offer.cta} →</span>
-        </a>
+        <div className="offers">
+          <a className="offer" href={landingUrl(offer, moment)} target="_blank" rel="noopener noreferrer sponsored">
+            <span className="sponsored-tag">Sponsored · {offer.store.name}</span>
+            <span className="offer-row">
+              <span className="offer-tile" style={{ background: offer.store.color }} aria-hidden>{offer.emoji}</span>
+              <span className="offer-info">
+                <strong>{offer.name}</strong>
+                <span className="offer-blurb">{offer.blurb}</span>
+                <span className="offer-rating">★ {offer.rating.toFixed(1)} · {offer.reviews.toLocaleString()} reviews</span>
+              </span>
+            </span>
+            <span className="offer-buy">
+              <Price p={offer} />
+              <span className="offer-cta">Buy now</span>
+            </span>
+          </a>
+          {more.length > 0 && (
+            <div className="offer-more">
+              {more.map((p) => (
+                <a key={p.id} href={landingUrl(p, moment)} target="_blank" rel="noopener noreferrer sponsored">
+                  <span className="offer-tile small" style={{ background: p.store.color }} aria-hidden>{p.emoji}</span>
+                  <span className="offer-more-name">{p.name}</span>
+                  <Price p={p} />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
         <p className="muted">No sponsored offer for this moment.</p>
       )}
@@ -193,5 +211,14 @@ export function DiscoverSheet({ moment, onClose, onSeek }: SheetProps) {
         <span>Sponsored offers are matched to the product mentioned, not to you, and never appear on claims or political content.</span>
       </footer>
     </section>
+  );
+}
+
+function Price({ p }: { p: Product }) {
+  return (
+    <span className="offer-price">
+      {formatPrice(p.price)}
+      {p.was && <s>{formatPrice(p.was)}</s>}
+    </span>
   );
 }
