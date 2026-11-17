@@ -6,12 +6,13 @@
 // 3. Gemini's times are whole-second estimates, so snap each start to the nearest real
 //    speech onset that we detect from the audio energy. This tightens popup timing a lot.
 import { getGenerativeModel, Schema, ThinkingLevel } from 'firebase/ai';
-import { GEMINI_API_KEY, getFirebaseAI } from './config';
+import { GEMINI_API_KEY, getFirebaseAI, LITE_MODEL, LITE_MODELS } from './config';
+import { withFallback } from './retry';
 import { geminiGenerate } from './geminiRest';
 import { alignSegments, speechOnsets } from './align';
 import type { Segment } from '../types';
 
-export const TRANSCRIBE_MODEL: string = import.meta.env.VITE_TRANSCRIBE_MODEL || 'gemini-3.5-flash-lite';
+export const TRANSCRIBE_MODEL = LITE_MODEL;
 
 const MAX_INLINE_BYTES = 19 * 1024 * 1024; // Gemini's limit is 20 MB per request, including base64 overhead
 const MAX_SECONDS = 15 * 60;
@@ -117,48 +118,67 @@ function toBase64(buf: ArrayBuffer): string {
   return btoa(bin);
 }
 
-async function callGemini(audio: Audio): Promise<{ start: string; text: string }[]> {
+const parseSegments = (text: string) => {
+  const j = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ''));
+  return (Array.isArray(j) ? j : j.segments ?? []) as { start: string; text: string }[];
+};
+
+/** One transcription call. Thinking is kept minimal: those tokens are billed as output and add nothing here. */
+async function callModel(model: string, audio: Pick<Audio, 'base64'>, thinking: boolean) {
   const ai = getFirebaseAI();
-  const parse = (text: string) => {
-    const j = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ''));
-    return (Array.isArray(j) ? j : j.segments ?? []) as { start: string; text: string }[];
-  };
-
   if (ai) {
-    const run = async (thinking: boolean) => {
-      const model = getGenerativeModel(ai, {
-        model: TRANSCRIBE_MODEL,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: FIREBASE_SCHEMA,
-          temperature: 0,
-          // Thinking tokens are billed as output and add nothing to transcription.
-          ...(thinking ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } } : {}),
-        },
-      });
-      const res = await model.generateContent([{ type: 'inlineData', inlineData: { mimeType: 'audio/wav', data: audio.base64 } }, PROMPT]);
-      return parse(res.response.text());
-    };
-    return run(true).catch((e: Error) => (/thinking/i.test(e.message) ? run(false) : Promise.reject(e)));
+    const m = getGenerativeModel(ai, {
+      model,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: FIREBASE_SCHEMA,
+        temperature: 0,
+        ...(thinking ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } } : {}),
+      },
+    });
+    const res = await m.generateContent([{ type: 'inlineData', inlineData: { mimeType: 'audio/wav', data: audio.base64 } }, PROMPT]);
+    return parseSegments(res.response.text());
   }
-
   if (GEMINI_API_KEY) {
-    const run = async (thinking: boolean) => {
-      const res = await geminiGenerate({
-        contents: [{ role: 'user', parts: [{ inline_data: { mime_type: 'audio/wav', data: audio.base64 } }, { text: PROMPT }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseJsonSchema: JSON_SCHEMA,
-          temperature: 0,
-          ...(thinking ? { thinkingConfig: { thinkingLevel: 'minimal' } } : {}),
-        },
-      });
-      return parse(res.text);
-    };
-    return run(true).catch((e: Error) => (/thinking/i.test(e.message) ? run(false) : Promise.reject(e)));
+    const res = await geminiGenerate({
+      contents: [{ role: 'user', parts: [{ inline_data: { mime_type: 'audio/wav', data: audio.base64 } }, { text: PROMPT }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseJsonSchema: JSON_SCHEMA,
+        temperature: 0,
+        ...(thinking ? { thinkingConfig: { thinkingLevel: 'minimal' } } : {}),
+      },
+    });
+    return parseSegments(res.text);
   }
-
   throw new Error('Transcription needs Firebase AI Logic (or a Gemini key in local dev).');
+}
+
+async function callGemini(audio: Pick<Audio, 'base64'>, onRetry?: (msg: string) => void) {
+  const { segments, model } = await withFallback(
+    LITE_MODELS,
+    async (model) => {
+      // Some models reject thinking settings; retry that model once without them.
+      const segments = await callModel(model, audio, true).catch((e: Error) =>
+        /thinking/i.test(e.message) ? callModel(model, audio, false) : Promise.reject(e),
+      );
+      return { segments };
+    },
+    { onRetry: (model, attempt) => onRetry?.(`${model} is busy, retrying (${attempt})…`) },
+  );
+  return { raw: segments, model };
+}
+
+/** Transcribe audio that has already been decoded (used by the browser flow and by tests). */
+export async function transcribeDecoded(
+  audio: Pick<Audio, 'base64' | 'pcm' | 'rate' | 'duration'>,
+  onProgress?: (p: TranscribeProgress) => void,
+): Promise<{ segments: Segment[]; model: string }> {
+  const { raw, model } = await callGemini(audio, (detail) => onProgress?.({ stage: 'uploading', detail }));
+  onProgress?.({ stage: 'aligning', detail: 'Snapping timestamps to speech onsets…' });
+  const segments = alignSegments(raw, speechOnsets(audio.pcm, audio.rate), audio.duration);
+  onProgress?.({ stage: 'done', detail: `${segments.length} segments` });
+  return { segments, model };
 }
 
 export async function transcribe(file: Blob, onProgress?: (p: TranscribeProgress) => void): Promise<Segment[]> {
@@ -168,9 +188,5 @@ export async function transcribe(file: Blob, onProgress?: (p: TranscribeProgress
     stage: 'uploading',
     detail: `Sending ${(audio.bytes / 1e6).toFixed(1)} MB of audio (${Math.round(audio.duration)} s) to ${TRANSCRIBE_MODEL}…`,
   });
-  const raw = await callGemini(audio);
-  onProgress?.({ stage: 'aligning', detail: 'Snapping timestamps to speech onsets…' });
-  const segments = alignSegments(raw, speechOnsets(audio.pcm, audio.rate), audio.duration);
-  onProgress?.({ stage: 'done', detail: `${segments.length} segments` });
-  return segments;
+  return (await transcribeDecoded(audio, onProgress)).segments;
 }

@@ -85,6 +85,7 @@ export function VerifySheet({ moment, cached, onResult, onClose, onSeek, onLog }
 
       {result && (
         <>
+          {result.notice && <p className="notice">{result.notice}</p>}
           <div className={`verdict verdict-${result.verdict}`}>
             <span className="verdict-icon">{VERDICT_COPY[result.verdict].icon}</span>
             <div>
@@ -136,7 +137,7 @@ export function VerifySheet({ moment, cached, onResult, onClose, onSeek, onLog }
           </div>
           <footer className="sheet-foot">
             <EngineBadge engine={result.engine} />
-            <span>AI summary of search results · checked {new Date(result.checkedAt).toLocaleTimeString()} · {result.ms} ms</span>
+            <span>{result.model && `${result.model} · `}AI summary of search results · checked {new Date(result.checkedAt).toLocaleTimeString()} · {result.ms} ms</span>
           </footer>
         </>
       )}

@@ -10,10 +10,10 @@ export interface RestResponse {
   };
 }
 
-export async function geminiGenerate(body: object, signal?: AbortSignal): Promise<RestResponse> {
+export async function geminiGenerate(body: object, signal?: AbortSignal, model: string = CLOUD_MODEL): Promise<RestResponse> {
   if (!GEMINI_API_KEY) throw new Error('VITE_GEMINI_API_KEY not set');
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${CLOUD_MODEL}:generateContent`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },

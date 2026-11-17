@@ -1,6 +1,7 @@
 // Verify Mode: cloud Gemini + Grounding with Google Search, plus the Fact Check Tools API.
 import { getGenerativeModel, type GroundingMetadata } from 'firebase/ai';
-import { CLOUD_MODEL, FACTCHECK_API_KEY, GEMINI_API_KEY, getFirebaseAI } from './config';
+import { FACTCHECK_API_KEY, GEMINI_API_KEY, getFirebaseAI, VERIFY_MODELS } from './config';
+import { QuotaError, withFallback } from './retry';
 import { geminiGenerate } from './geminiRest';
 import { demoVerification } from './demoCache';
 import type { Engine, FactCheck, Moment, Source, Verdict, Verification } from '../types';
@@ -87,33 +88,43 @@ export async function searchFactChecks(query: string, signal?: AbortSignal): Pro
   return out.slice(0, 5);
 }
 
-async function groundedCall(m: Moment, signal?: AbortSignal) {
-  const prompt = verifyPrompt(m);
+type Grounded = { text: string; meta?: GroundingMetadata; engine: Engine };
+
+async function groundedOnce(model: string, prompt: string, signal?: AbortSignal): Promise<Grounded> {
   const ai = getFirebaseAI();
   if (ai) {
     // Grounding is a cloud-only capability, so this model is cloud-only by design.
-    const model = getGenerativeModel(ai, { model: CLOUD_MODEL, tools: [{ googleSearch: {} }] });
-    const result = await model.generateContent(prompt, { signal });
-    const meta = result.response.candidates?.[0]?.groundingMetadata;
-    return { text: result.response.text(), meta, engine: 'firebase-cloud' as Engine };
+    const result = await getGenerativeModel(ai, { model, tools: [{ googleSearch: {} }] }).generateContent(prompt, { signal });
+    return { text: result.response.text(), meta: result.response.candidates?.[0]?.groundingMetadata, engine: 'firebase-cloud' };
   }
-  if (GEMINI_API_KEY) {
-    const res = await geminiGenerate({ contents: [{ role: 'user', parts: [{ text: prompt }] }], tools: [{ google_search: {} }] }, signal);
-    return { text: res.text, meta: res.groundingMetadata as GroundingMetadata | undefined, engine: 'gemini-api' as Engine };
-  }
-  return undefined;
+  const res = await geminiGenerate({ contents: [{ role: 'user', parts: [{ text: prompt }] }], tools: [{ google_search: {} }] }, signal, model);
+  return { text: res.text, meta: res.groundingMetadata as GroundingMetadata | undefined, engine: 'gemini-api' };
 }
+
+async function groundedCall(m: Moment, signal?: AbortSignal) {
+  if (!getFirebaseAI() && !GEMINI_API_KEY) return undefined;
+  return withFallback(VERIFY_MODELS, (model) => groundedOnce(model, verifyPrompt(m), signal), { signal });
+}
+
+const QUOTA_NOTICE =
+  'Live Google Search checks are not available on this project yet: Grounding with Google Search needs the Blaze (pay-as-you-go) plan, which includes 5,000 free searches a month. Showing the offline demo result instead.';
 
 export async function verifyMoment(m: Moment, signal?: AbortSignal): Promise<Verification> {
   const t0 = performance.now();
-  const [grounded, factChecks] = await Promise.all([
-    groundedCall(m, signal),
-    searchFactChecks(m.query, signal).catch(() => []),
-  ]);
+  const factChecksP = searchFactChecks(m.query, signal).catch(() => [] as FactCheck[]);
+  let grounded: (Grounded & { model: string }) | undefined;
+  let notice: string | undefined;
+  try {
+    grounded = await groundedCall(m, signal);
+  } catch (e) {
+    if (!(e instanceof QuotaError)) throw e;
+    notice = QUOTA_NOTICE;
+  }
+  const factChecks = await factChecksP;
 
   if (!grounded) {
     const cached = demoVerification(m);
-    return { ...cached, factChecks: [...factChecks, ...cached.factChecks], ms: Math.round(performance.now() - t0) };
+    return { ...cached, notice, factChecks: [...factChecks, ...cached.factChecks], ms: Math.round(performance.now() - t0) };
   }
 
   return {
@@ -123,6 +134,7 @@ export async function verifyMoment(m: Moment, signal?: AbortSignal): Promise<Ver
     searchEntryPointHtml: grounded.meta?.searchEntryPoint?.renderedContent,
     factChecks,
     engine: grounded.engine,
+    model: grounded.model,
     ms: Math.round(performance.now() - t0),
     checkedAt: new Date().toISOString(),
   };

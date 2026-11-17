@@ -82,6 +82,8 @@ export interface Verification {
   searchEntryPointHtml?: string; // Google-required Search Suggestions chip
   factChecks: FactCheck[];
   engine: Engine;
+  model?: string; // which cloud model answered (after any fallback)
+  notice?: string; // shown when live checks were unavailable, e.g. no Search grounding quota
   ms: number;
   checkedAt: string;
 }

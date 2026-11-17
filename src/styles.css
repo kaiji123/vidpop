@@ -188,3 +188,5 @@ h1, h2, h3, h4 { margin: 0; }
 .status-overlay { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 24px; text-align: center; background: #000a; backdrop-filter: blur(4px); }
 .status-overlay p { margin: 0; max-width: 260px; }
 .status-overlay.error strong { color: var(--bad); }
+
+.notice { font-size: 12px; line-height: 1.45; color: var(--mixed); background: #fbbf2414; border: 1px solid #fbbf2433; border-radius: 10px; padding: 8px 10px; margin: 0 0 10px; }

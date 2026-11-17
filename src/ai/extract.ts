@@ -9,7 +9,8 @@
 // The model only returns *segment indices*; timestamps always come from the transcript,
 // so popups land at exactly the right moment even if the model is imprecise.
 import { getGenerativeModel, InferenceMode, Schema } from 'firebase/ai';
-import { CLOUD_MODEL, GEMINI_API_KEY, getFirebaseAI } from './config';
+import { GEMINI_API_KEY, getFirebaseAI, LITE_MODEL, LITE_MODELS } from './config';
+import { withFallback } from './retry';
 import { createNanoSession, nanoAvailability } from './nano';
 import { geminiGenerate } from './geminiRest';
 import { heuristicExtract } from './heuristic';
@@ -107,25 +108,29 @@ type Runner = (prompt: string) => Promise<{ raw: RawMoment[]; engine: Engine }>;
 async function firebaseRunner(): Promise<Runner | undefined> {
   const ai = getFirebaseAI();
   if (!ai) return undefined;
-  const model = getGenerativeModel(ai, {
-    mode: InferenceMode.PREFER_ON_DEVICE,
-    onDeviceParams: {
-      createOptions: {
-        expectedInputs: [{ type: 'text', languages: ['en'] }],
-        expectedOutputs: [{ type: 'text', languages: ['en'] }],
+  // Hybrid: Gemini Nano when the browser has it, otherwise cloud Flash-Lite (cheap, fast).
+  const modelFor = (cloudModel: string) =>
+    getGenerativeModel(ai, {
+      mode: InferenceMode.PREFER_ON_DEVICE,
+      onDeviceParams: {
+        createOptions: {
+          expectedInputs: [{ type: 'text', languages: ['en'] }],
+          expectedOutputs: [{ type: 'text', languages: ['en'] }],
+        },
+        promptOptions: { responseConstraint: JSON_SCHEMA },
       },
-      promptOptions: { responseConstraint: JSON_SCHEMA },
-    },
-    inCloudParams: {
-      model: CLOUD_MODEL,
-      generationConfig: { responseMimeType: 'application/json', responseSchema: FIREBASE_SCHEMA, temperature: 0.1 },
-    },
-  });
+      inCloudParams: {
+        model: cloudModel,
+        generationConfig: { responseMimeType: 'application/json', responseSchema: FIREBASE_SCHEMA, temperature: 0.1 },
+      },
+    });
   return async (prompt) => {
     // System prompt is inlined so it reaches both the on-device and cloud paths.
-    const result = await model.generateContent(`${SYSTEM_PROMPT}\n\nTranscript:\n${prompt}`);
-    const engine: Engine = result.response.inferenceSource === 'on_device' ? 'firebase-on-device' : 'firebase-cloud';
-    return { raw: parseJson(result.response.text()), engine };
+    const result = await withFallback(LITE_MODELS, async (cloudModel) => ({
+      res: await modelFor(cloudModel).generateContent(`${SYSTEM_PROMPT}\n\nTranscript:\n${prompt}`),
+    }));
+    const engine: Engine = result.res.response.inferenceSource === 'on_device' ? 'firebase-on-device' : 'firebase-cloud';
+    return { raw: parseJson(result.res.response.text()), engine };
   };
 }
 
@@ -150,7 +155,7 @@ function restRunner(): Runner | undefined {
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
       contents: [{ role: 'user', parts: [{ text: `Transcript:\n${prompt}` }] }],
       generationConfig: { responseMimeType: 'application/json', responseJsonSchema: JSON_SCHEMA, temperature: 0.1 },
-    });
+    }, undefined, LITE_MODEL);
     return { raw: parseJson(res.text), engine: 'gemini-api' };
   };
 }
