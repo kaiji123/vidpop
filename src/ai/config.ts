@@ -1,5 +1,6 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAI, GoogleAIBackend, type AI } from 'firebase/ai';
+import { CustomProvider, initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
 // Reference each variable individually: Vite inlines only what is named, and reading the
 // whole import.meta.env object would copy every VITE_* value into the bundle.
@@ -27,13 +28,37 @@ const firebaseConfig = {
 
 export const firebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
 
+// App Check proves requests come from this app, so the public web config can't be used to
+// spend your Gemini quota. Production: reCAPTCHA Enterprise site key.
+const RECAPTCHA_SITE_KEY: string | undefined = import.meta.env.VITE_RECAPTCHA_ENTERPRISE_SITE_KEY || undefined;
+// Dev-only: a debug token bypasses App Check, so it must never ship. Vite strips this branch
+// from production builds. Register the same token in Firebase console → App Check → Manage debug tokens.
+const APPCHECK_DEBUG_TOKEN: string | undefined = import.meta.env.DEV
+  ? import.meta.env.VITE_APPCHECK_DEBUG_TOKEN || undefined
+  : undefined;
+
 let app: FirebaseApp | undefined;
 let ai: AI | undefined;
+export let appCheckMode: 'recaptcha' | 'debug' | 'off' = 'off';
+
+function startAppCheck(firebaseApp: FirebaseApp) {
+  if (APPCHECK_DEBUG_TOKEN) {
+    (globalThis as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string }).FIREBASE_APPCHECK_DEBUG_TOKEN = APPCHECK_DEBUG_TOKEN;
+  }
+  if (!RECAPTCHA_SITE_KEY && !APPCHECK_DEBUG_TOKEN) return;
+  // In debug mode the provider is never asked for a token, so a placeholder avoids loading reCAPTCHA.
+  const provider = RECAPTCHA_SITE_KEY
+    ? new ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY)
+    : new CustomProvider({ getToken: () => Promise.reject(new Error('No App Check provider configured')) });
+  initializeAppCheck(firebaseApp, { provider, isTokenAutoRefreshEnabled: true });
+  appCheckMode = APPCHECK_DEBUG_TOKEN ? 'debug' : 'recaptcha';
+}
 
 export function getFirebaseAI(): AI | undefined {
   if (!firebaseConfigured) return undefined;
   if (!ai) {
     app = initializeApp(firebaseConfig);
+    startAppCheck(app); // must run before the first AI request
     ai = getAI(app, { backend: new GoogleAIBackend() });
   }
   return ai;
