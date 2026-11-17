@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>VidPop media</title>
+<style>
+  :root {
+    --bg: #0b0b10; --panel: #15151d; --panel-2: #1c1c27; --line: #2a2a38; --text: #f2f2f7; --muted: #9a9aae;
+    --accent: #ff3d6e; --claim: #ffb020; --product: #2ee6c5; --ok: #34d399; --bad: #f87171; --mixed: #fbbf24; --cloud: #8ab4ff;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 1500px; height: 1000px; overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Inter, system-ui, sans-serif; }
+  .slide { position: relative; width: 1500px; height: 1000px; overflow: hidden; display: none;
+    background: radial-gradient(900px 600px at 85% 20%, #ff3d6e22, transparent 70%), radial-gradient(800px 600px at 10% 100%, #2ee6c51a, transparent 70%), var(--bg); }
+  .slide.on { display: block; }
+  .brand { position: absolute; left: 80px; top: 64px; display: flex; align-items: center; gap: 14px; font-weight: 800; font-size: 26px; }
+  .logo { width: 44px; height: 44px; border-radius: 12px; background: var(--accent); display: grid; place-items: center; }
+  .logo svg { width: 20px; height: 20px; }
+  .copy { position: absolute; left: 80px; top: 170px; width: 640px; }
+  .kicker { font-size: 18px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 18px; }
+  h1 { font-size: 64px; line-height: 1.05; letter-spacing: -0.02em; font-weight: 800; }
+  h2 { font-size: 52px; line-height: 1.08; letter-spacing: -0.02em; font-weight: 800; }
+  .lede { margin-top: 24px; font-size: 24px; line-height: 1.45; color: #c9c9d6; }
+  ul.points { list-style: none; padding: 0; margin-top: 34px; display: grid; gap: 18px; }
+  ul.points li { display: grid; grid-template-columns: 34px 1fr; gap: 14px; font-size: 21px; line-height: 1.4; color: #d8d8e2; }
+  ul.points li b { color: var(--text); }
+  .dot { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 17px; font-weight: 800; }
+  .d-claim { background: #ffb02022; color: var(--claim); } .d-product { background: #2ee6c522; color: var(--product); }
+  .d-accent { background: #ff3d6e22; color: var(--accent); } .d-cloud { background: #8ab4ff22; color: var(--cloud); }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 34px; }
+  .chip { font-size: 17px; font-weight: 700; padding: 8px 14px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: #d8d8e2; }
+  .chip i { font-style: normal; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
+  .phone { position: absolute; border-radius: 34px; box-shadow: 0 30px 80px #000a, 0 0 0 1px #ffffff14; }
+  .shot { position: absolute; border-radius: 14px; box-shadow: 0 30px 80px #000a, 0 0 0 1px #ffffff14; }
+  .label { position: absolute; font-size: 16px; font-weight: 700; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+  .foot { position: absolute; left: 80px; bottom: 54px; font-size: 17px; color: var(--muted); }
+
+  /* Upload slide: pipeline card */
+  .pipe { position: absolute; left: 80px; top: 470px; width: 660px; background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 26px 28px; display: grid; gap: 14px; }
+  .step { display: grid; grid-template-columns: 30px 1fr auto; gap: 14px; align-items: center; font-size: 20px; }
+  .step .n { width: 30px; height: 30px; border-radius: 50%; background: var(--panel-2); display: grid; place-items: center; font-size: 15px; font-weight: 800; color: var(--muted); }
+  .step .t { color: var(--muted); font-size: 17px; font-variant-numeric: tabular-nums; }
+  .verdicts { display: grid; gap: 8px; margin: 2px 0 0 44px; }
+  .v { display: grid; grid-template-columns: 54px 1fr auto; gap: 12px; align-items: center; background: var(--panel-2); border-radius: 12px; padding: 10px 14px; font-size: 18px; }
+  .v .ts { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .v .tag { font-size: 14px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+  .bad { color: var(--bad); } .mixed { color: var(--mixed); } .ok { color: var(--ok); }
+
+  /* Architecture slide */
+  .arch { position: absolute; left: 80px; top: 250px; width: 1340px; height: 680px; }
+  .zone { position: absolute; border-radius: 24px; border: 2px dashed; padding: 20px 24px; }
+  .zone h3 { font-size: 16px; letter-spacing: .12em; text-transform: uppercase; font-weight: 800; }
+  .z-device { left: 0; top: 0; width: 650px; height: 680px; border-color: #2ee6c555; background: #2ee6c50a; }
+  .z-device h3 { color: var(--product); }
+  .z-cloud { left: 700px; top: 0; width: 640px; height: 680px; border-color: #8ab4ff55; background: #8ab4ff0a; }
+  .z-cloud h3 { color: var(--cloud); }
+  .node { position: absolute; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; box-shadow: 0 10px 30px #0006; }
+  .node b { display: block; font-size: 21px; margin-bottom: 4px; }
+  .node span { display: block; font-size: 16px; line-height: 1.4; color: var(--muted); }
+  .node .eng { margin-top: 8px; font-size: 14px; font-weight: 800; letter-spacing: .03em; }
+  .eng-dev { color: var(--product); } .eng-cloud { color: var(--cloud); } .eng-acc { color: var(--accent); }
+  svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  svg.wires path { fill: none; stroke: #6b6b80; stroke-width: 2.5; }
+  .shield { position: absolute; right: 24px; bottom: 22px; font-size: 15px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- 1. Cover -->
+<section class="slide" id="cover">
+  <div class="brand"><div class="logo"><svg viewBox="0 0 20 20"><path d="M6 3l11 7-11 7z" fill="#fff"/></svg></div>VidPop</div>
+  <div class="copy" style="top: 250px; width: 680px">
+    <div class="kicker">Hybrid AI for video</div>
+    <h1>Check what's said in a video, at the second it's said.</h1>
+    <p class="lede">VidPop finds claims and products as they're spoken. It fact-checks the claims with Gemini and Google Search, and shows the answer inside the video.</p>
+    <div class="chips">
+      <span class="chip"><i style="background: var(--product)"></i>Gemini Nano on-device</span>
+      <span class="chip"><i style="background: var(--cloud)"></i>Gemini + Google Search</span>
+      <span class="chip"><i style="background: var(--accent)"></i>Firebase AI Logic</span>
+    </div>
+  </div>
+  <img class="phone" src="../raw/phone-verify-sources.png" style="left: 1120px; top: 190px; width: 330px; transform: rotate(5deg);" />
+  <img class="phone" src="../raw/phone-popup.png" style="left: 810px; top: 120px; width: 360px; transform: rotate(-4deg);" />
+</section>
+
+<!-- 2. Verify -->
+<section class="slide" id="verify">
+  <div class="brand"><div class="logo"><svg viewBox="0 0 20 20"><path d="M6 3l11 7-11 7z" fill="#fff"/></svg></div>VidPop</div>
+  <div class="copy">
+    <div class="kicker" style="color: var(--claim)">Verify mode</div>
+    <h2>Fact checks that are ready before you tap.</h2>
+    <ul class="points">
+      <li><span class="dot d-claim">1</span><span><b>Claims pop up on the exact word</b>, because timestamps come from the transcript, never from the model.</span></li>
+      <li><span class="dot d-cloud">2</span><span><b>Every claim is checked in the background</b> by Gemini with Grounding with Google Search, so the popup already shows the verdict.</span></li>
+      <li><span class="dot d-accent">3</span><span><b>Tap for the evidence:</b> a neutral verdict, cited sources with dates, published fact-checks and Google Search, all without leaving the video.</span></li>
+    </ul>
+  </div>
+  <img class="phone" src="../raw/phone-popup.png" style="left: 790px; top: 110px; width: 330px;" />
+  <img class="phone" src="../raw/phone-verify-sources.png" style="left: 1140px; top: 110px; width: 330px;" />
+  <div class="label" style="left: 790px; top: 735px;">The popup shows the verdict</div>
+  <div class="label" style="left: 1140px; top: 735px;">Tap for the sources</div>
+</section>
+
+<!-- 3. Upload your own clip -->
+<section class="slide" id="upload">
+  <div class="brand"><div class="logo"><svg viewBox="0 0 20 20"><path d="M6 3l11 7-11 7z" fill="#fff"/></svg></div>VidPop</div>
+  <div class="copy" style="top: 160px; width: 680px">
+    <div class="kicker">Works on any clip</div>
+    <h2>Drop in a video. VidPop does the rest.</h2>
+    <p class="lede" style="font-size: 22px">A 14-second phone video, with no captions and no extra clicks.</p>
+  </div>
+  <div class="pipe">
+    <div class="step"><span class="n">1</span><span>Transcribed with <b>Gemini Flash-Lite</b> (audio only)</span><span class="t">1.5 s</span></div>
+    <div class="step"><span class="n">2</span><span>Found <b>3 claims</b> with Firebase AI Logic</span><span class="t">1.2 s</span></div>
+    <div class="step"><span class="n">3</span><span>Checked in the background with <b>Google Search</b></span><span class="t">~10 s</span></div>
+    <div class="verdicts">
+      <div class="v"><span class="ts">0:02</span><span>“I think 2 + 2 is 5”</span><span class="tag bad">✕ Contradicted</span></div>
+      <div class="v"><span class="ts">0:04</span><span>“Diamond is not the hardest”</span><span class="tag mixed">≈ Mixed</span></div>
+      <div class="v"><span class="ts">0:10</span><span>“Wood is the hardest material”</span><span class="tag bad">✕ Contradicted</span></div>
+    </div>
+  </div>
+  <img class="phone" src="../raw/phone-upload-popup.png" style="left: 900px; top: 70px; width: 440px;" />
+</section>
+
+<!-- 4. Discover -->
+<section class="slide" id="discover">
+  <div class="brand"><div class="logo"><svg viewBox="0 0 20 20"><path d="M6 3l11 7-11 7z" fill="#fff"/></svg></div>VidPop</div>
+  <div class="copy" style="width: 500px">
+    <div class="kicker" style="color: var(--product)">Discover mode</div>
+    <h2>Find what was mentioned, without leaving the video.</h2>
+    <ul class="points">
+      <li><span class="dot d-product">1</span><span><b>Google Search and price comparison</b> for every product mentioned.</span></li>
+      <li><span class="dot d-product">2</span><span><b>Sponsored cards</b> matched to what was said, never to who's watching.</span></li>
+      <li><span class="dot d-accent">3</span><span><b>Always labelled.</b> Never shown on claims or political content, and kept separate from fact-checking.</span></li>
+    </ul>
+  </div>
+  <img class="shot" src="../raw/store.png" style="left: 930px; top: 300px; width: 520px;" />
+  <img class="phone" src="../raw/phone-discover.png" style="left: 610px; top: 90px; width: 350px;" />
+  <div class="label" style="left: 1000px; top: 660px;">Demo store · fictional advertiser</div>
+</section>
+
+<!-- 5. Architecture -->
+<section class="slide" id="arch">
+  <div class="brand"><div class="logo"><svg viewBox="0 0 20 20"><path d="M6 3l11 7-11 7z" fill="#fff"/></svg></div>VidPop</div>
+  <div class="copy" style="top: 140px; width: 1340px">
+    <h2 style="font-size: 46px">Hybrid by design: cheap and private on-device, grounded in the cloud.</h2>
+  </div>
+  <div class="arch">
+    <div class="zone z-device"><h3>In the browser · on-device first</h3></div>
+    <div class="zone z-cloud"><h3>Cloud · Firebase AI Logic</h3></div>
+
+    <div class="node" style="left: 30px; top: 70px; width: 270px;"><b>Video</b><span>Demo clip, or any upload. Only the audio track is extracted, as 16 kHz WAV.</span></div>
+    <div class="node" style="left: 30px; top: 270px; width: 590px;"><b>Moment detection</b><span>Finds claims and products, returning transcript line numbers, never times. Runs on <code>PREFER_ON_DEVICE</code>.</span><div class="eng eng-dev">GEMINI NANO · FLASH-LITE FALLBACK</div></div>
+    <div class="node" style="left: 30px; top: 470px; width: 280px;"><b>Popup at the exact word</b><span>Times come from the transcript, snapped to real speech onsets.</span></div>
+    <div class="node" style="left: 340px; top: 470px; width: 280px;"><b>Sponsored match</b><span>Products only, labelled, keyword match on what was said.</span><div class="eng eng-acc">NO VIEWER DATA</div></div>
+
+    <div class="node" style="left: 730px; top: 70px; width: 580px;"><b>Transcription</b><span>Sentence segments with start times, from audio only.</span><div class="eng eng-cloud">GEMINI FLASH-LITE</div></div>
+    <div class="node" style="left: 730px; top: 270px; width: 580px;"><b>Background fact checks</b><span>Every claim, two at a time, with the surrounding speech for context. Popups get their verdict before anyone taps.</span><div class="eng eng-cloud">GEMINI + GROUNDING WITH GOOGLE SEARCH</div></div>
+    <div class="node" style="left: 730px; top: 470px; width: 580px;"><b>Published fact-checks, in parallel</b><span>Matching reviews with publisher and date, shown beside the verdict.</span><div class="eng eng-cloud">GOOGLE FACT CHECK TOOLS API</div></div>
+    <div class="shield">🛡 App Check · reCAPTCHA Enterprise protects every Gemini call</div>
+
+    <svg class="wires" viewBox="0 0 1340 680">
+      <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8a8aa0"/></marker></defs>
+      <path d="M300 120 H726" marker-end="url(#a)"/>
+      <path d="M900 190 V230 Q900 245 885 245 H340 Q325 245 325 260 V266" marker-end="url(#a)"/>
+      <path d="M170 395 V466" marker-end="url(#a)"/>
+      <path d="M480 395 V466" marker-end="url(#a)"/>
+      <path d="M620 330 H726" marker-end="url(#a)"/>
+    </svg>
+  </div>
+</section>
+
+<!-- 6. Full app -->
+<section class="slide" id="app">
+  <div class="brand"><div class="logo"><svg viewBox="0 0 20 20"><path d="M6 3l11 7-11 7z" fill="#fff"/></svg></div>VidPop</div>
+  <div class="copy" style="top: 56px; left: 330px; width: 1100px">
+    <h2 style="font-size: 38px; line-height: 1.2">Nothing hidden: every result shows which engine produced it.</h2>
+  </div>
+  <img class="shot" src="../raw/app-popup.png" style="left: 210px; top: 170px; width: 1080px;" />
+</section>
+
+<script>
+  const id = new URLSearchParams(location.search).get('s') || 'cover';
+  document.getElementById(id).classList.add('on');
+</script>
+</body>
+</html>

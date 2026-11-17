@@ -3,3 +3,11 @@ dist
 .env
 .env.local
 .DS_Store
+
+# Personal test clips and their transcripts
+/VID_*
+# Media made from personal test clips (shows a real face); kept local only
+media/3-upload-any-clip.jpg
+media/raw/app-upload.png
+media/raw/phone-upload-popup.png
+media/raw/phone-transcribing.png

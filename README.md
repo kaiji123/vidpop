@@ -93,3 +93,7 @@ Limits: up to 15 minutes (clips over 7 minutes are sent at 8 kHz to stay under G
 
 - Add the TikTok embed player (it exposes playback time) for real creator content.
 - Cache verifications per claim server-side, so popular claims return instantly.
+
+## License
+
+[MIT](LICENSE). The demo stores and products in `src/ads/catalog.ts` are fictional, and the demo clips in `public/clips/` are synthetic. Third-party services (Gemini, Firebase, Google Search, the Fact Check Tools API) are used under their own terms.
