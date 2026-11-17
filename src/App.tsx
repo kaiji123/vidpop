@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { extractMoments } from './ai/extract';
 import { createNanoSession, nanoAvailability, type NanoAvailability } from './ai/nano';
+import { transcribe, TRANSCRIBE_MODEL } from './ai/transcribe';
+import { cloudBackend } from './ai/config';
 import { Phone } from './components/Phone';
 import { SidePanel } from './components/SidePanel';
 import { DiscoverSheet, VerifySheet } from './components/Sheets';
-import type { Clip, Engine, ExtractionResult, LogEntry, Moment, Verification } from './types';
+import type { Clip, Engine, ExtractionResult, LogEntry, Moment, Segment, Verification } from './types';
 
 type ModeFilter = 'verify' | 'discover' | 'all';
 
@@ -71,15 +73,49 @@ export default function App() {
     [log],
   );
 
-  // Scan each clip once, ahead of playback.
+  // Scan each clip once, as soon as it has a transcript (uploads get one after transcription).
   const requested = useRef(new Set<string>());
   useEffect(() => {
-    if (clip && !requested.current.has(clip.id)) {
+    if (clip && clip.segments.length > 0 && !requested.current.has(clip.id)) {
       requested.current.add(clip.id);
       scan(clip);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clip?.id]);
+  }, [clip?.id, clip?.segments.length]);
+
+  const updateClip = (id: string, patch: Partial<Clip>) =>
+    setClips((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+
+  /** Upload → transcribe (Gemini Flash-Lite) → scan (Gemini Nano), with no extra clicks. */
+  const upload = async (file: File, pastedSegments?: Segment[]) => {
+    const c: Clip = {
+      id: `upload-${Date.now()}`,
+      title: file.name.replace(/\.[^.]+$/, ''),
+      creator: '@you',
+      suggestedMode: 'verify',
+      src: URL.createObjectURL(file),
+      segments: pastedSegments ?? [],
+      status: pastedSegments ? undefined : 'transcribing',
+      statusDetail: pastedSegments ? undefined : 'Preparing audio…',
+    };
+    setClips((cs) => [...cs, c]);
+    switchClip(c);
+    setMode('all');
+    if (pastedSegments) return log('info', `Loaded ${file.name} with ${pastedSegments.length} pasted transcript lines`);
+
+    log('info', `Transcribing ${file.name} with ${TRANSCRIBE_MODEL}…`);
+    const t0 = performance.now();
+    try {
+      const segments = await transcribe(file, (p) => updateClip(c.id, { statusDetail: p.detail }));
+      if (segments.length === 0) throw new Error('No speech was found in this clip.');
+      updateClip(c.id, { segments, status: undefined, statusDetail: undefined });
+      log('ok', `Transcribed ${segments.length} segments in ${Math.round(performance.now() - t0)} ms`, cloudBackend === 'firebase' ? 'firebase-cloud' : 'gemini-api');
+    } catch (e) {
+      const msg = (e as Error).message;
+      updateClip(c.id, { status: 'error', statusDetail: msg });
+      log('error', `Transcription failed: ${msg}`);
+    }
+  };
 
   // Frame-accurate clock while playing.
   useEffect(() => {
@@ -250,10 +286,7 @@ export default function App() {
             onEnableNano={enableNano}
             onOpen={open}
             onSeek={seek}
-            onCustomClip={(c) => {
-              setClips((cs) => [...cs, c]);
-              switchClip(c);
-            }}
+            onUpload={upload}
           />
         </main>
       ) : (

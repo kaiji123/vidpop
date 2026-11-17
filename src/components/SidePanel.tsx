@@ -28,7 +28,7 @@ interface Props {
   onEnableNano: () => void;
   onOpen: (m: Moment) => void;
   onSeek: (t: number) => void;
-  onCustomClip: (clip: Clip) => void;
+  onUpload: (file: File, segments?: Segment[]) => void;
 }
 
 export function SidePanel(p: Props) {
@@ -133,52 +133,48 @@ export function SidePanel(p: Props) {
         )}
       </section>
 
-      <CustomClip onClip={p.onCustomClip} />
+      <UploadClip onUpload={p.onUpload} />
     </aside>
   );
 }
 
-function CustomClip({ onClip }: { onClip: (c: Clip) => void }) {
-  const [open, setOpen] = useState(false);
-  const [file, setFile] = useState<File>();
+/** Drop or pick a video: it is transcribed and scanned automatically. */
+function UploadClip({ onUpload }: { onUpload: (file: File, segments?: Segment[]) => void }) {
   const [text, setText] = useState('');
+  const [drag, setDrag] = useState(false);
   const [err, setErr] = useState<string>();
 
-  const load = () => {
-    const segments: Segment[] = parseTranscript(text);
-    if (!file) return setErr('Choose a video file.');
-    if (segments.length === 0) return setErr('Paste a transcript: WebVTT/SRT, or lines like "0:08 The Great Wall is…"');
+  const take = (file?: File) => {
+    if (!file) return;
+    if (!/^(video|audio)\//.test(file.type)) return setErr('That file isn\u2019t a video or audio file.');
     setErr(undefined);
-    onClip({
-      id: `custom-${Date.now()}`,
-      title: file.name.replace(/\.[^.]+$/, ''),
-      creator: '@you',
-      suggestedMode: 'verify',
-      src: URL.createObjectURL(file),
-      segments,
-    });
-    setOpen(false);
+    const pasted = text.trim() ? parseTranscript(text) : [];
+    onUpload(file, pasted.length ? pasted : undefined);
+    setText('');
   };
 
-  if (!open)
-    return (
-      <button className="btn btn-ghost" onClick={() => setOpen(true)}>+ Use your own clip</button>
-    );
   return (
     <section className="card">
-      <h2>Your own clip</h2>
-      <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0])} />
-      <textarea
-        rows={6}
-        placeholder={'Paste WebVTT / SRT, or:\n0:02 Okay so here is the news\n0:08 Scientists confirmed that…'}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
+      <label
+        className={`dropzone ${drag ? 'drag' : ''}`}
+        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={(e) => { e.preventDefault(); setDrag(false); take(e.dataTransfer.files?.[0]); }}
+      >
+        <input type="file" accept="video/*,audio/*" onChange={(e) => { take(e.target.files?.[0]); e.target.value = ''; }} />
+        <strong>+ Upload your own clip</strong>
+        <span className="muted">Drop a video here. VidPop transcribes it with Gemini, then finds claims and products automatically.</span>
+      </label>
       {err && <p className="error">{err}</p>}
-      <div className="sheet-actions">
-        <button className="btn btn-primary" onClick={load}>Load clip</button>
-        <button className="btn" onClick={() => setOpen(false)}>Cancel</button>
-      </div>
+      <details>
+        <summary className="muted">Already have captions? Paste them to skip transcription</summary>
+        <textarea
+          rows={5}
+          placeholder={'WebVTT / SRT, or:\n0:02 Okay so here is the news\n0:08 Scientists confirmed that…'}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+      </details>
     </section>
   );
 }

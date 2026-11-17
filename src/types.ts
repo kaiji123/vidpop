@@ -13,6 +13,9 @@ export interface Clip {
   duration?: number;
   segments: Segment[];
   synthetic?: boolean;
+  /** Uploaded clips: set while Gemini transcribes, or if transcription failed. */
+  status?: 'transcribing' | 'error';
+  statusDetail?: string;
 }
 
 export type Mode = 'verify' | 'discover';

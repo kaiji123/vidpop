@@ -179,3 +179,12 @@ h1, h2, h3, h4 { margin: 0; }
 
 .card input[type='file'] { font-size: 13px; }
 .card textarea { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 13px ui-monospace, monospace; resize: vertical; }
+
+.dropzone { display: grid; gap: 4px; text-align: center; padding: 18px; border: 1.5px dashed var(--line); border-radius: 12px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.dropzone:hover, .dropzone.drag { border-color: var(--accent); background: #ff3d6e0f; }
+.dropzone input { display: none; }
+.card details summary { cursor: pointer; margin-bottom: 8px; }
+
+.status-overlay { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 24px; text-align: center; background: #000a; backdrop-filter: blur(4px); }
+.status-overlay p { margin: 0; max-width: 260px; }
+.status-overlay.error strong { color: var(--bad); }

@@ -58,6 +58,22 @@ export function Phone(p: Props) {
 
         {caption && <div className="caption">{caption.text}</div>}
 
+        {p.clip.status === 'transcribing' && (
+          <div className="status-overlay">
+            <div className="spinner" />
+            <strong>Transcribing with Gemini</strong>
+            <p className="muted">{p.clip.statusDetail}</p>
+            <p className="muted">Moments are found automatically once it’s done.</p>
+          </div>
+        )}
+        {p.clip.status === 'error' && (
+          <div className="status-overlay error">
+            <strong>Couldn’t transcribe this clip</strong>
+            <p className="muted">{p.clip.statusDetail}</p>
+            <p className="muted">Re-upload it and paste captions under “Already have captions?” instead.</p>
+          </div>
+        )}
+
         {p.popup && !p.sheet && (
           <div className={`popup popup-${p.popup.kind}`} key={p.popup.id} role="dialog" aria-label="VidPop suggestion">
             <button className="popup-x" onClick={() => p.onDismiss(p.popup!)} aria-label="Dismiss">×</button>
@@ -87,7 +103,7 @@ export function Phone(p: Props) {
           {p.playing ? '❚❚' : '▶'}
         </button>
         <span className="time">{fmt(p.time)}</span>
-        <div className={`track ${p.scanning ? 'scanning' : ''}`} ref={bar} onPointerDown={scrub}>
+        <div className={`track ${p.scanning || p.clip.status === 'transcribing' ? 'scanning' : ''}`} ref={bar} onPointerDown={scrub}>
           <div className="progress" style={{ width: pct(p.time) }} />
           {p.moments.map((m) => (
             <button

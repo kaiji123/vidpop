@@ -70,7 +70,18 @@ Notes:
 - **4 facts that sound fake** (Verify): Great Wall from space (contradicted), Eiffel Tower thermal growth (supported), 10% of the brain (contradicted), edible tomb honey (mixed).
 - **Day 1 in Tokyo** (Discover): a camera, a rail pass and a power bank, plus one claim: "Tokyo is the most populous metro area". The UN's 2025 report changed that ranking, which shows why publication dates matter.
 
-To edit the scripts, change `scripts/make-clips.mjs` and rerun it. To use your own footage, click **+ Use your own clip** and paste a WebVTT/SRT file or lines like `0:08 The claim…`.
+To edit the scripts, change `scripts/make-clips.mjs` and rerun it.
+
+## Uploading your own clip
+
+Drop a video on **+ Upload your own clip**. There is no extra button: VidPop transcribes it, then scans it for moments, automatically.
+
+1. The browser pulls out the audio track and converts it to 16 kHz mono WAV (`src/ai/transcribe.ts`). Only audio is sent, because video frames would cost several times more tokens.
+2. **Gemini Flash-Lite** (`VITE_TRANSCRIBE_MODEL`, default `gemini-3.5-flash-lite`) returns sentence segments with MM:SS start times, through Firebase AI Logic. There is no backend.
+3. Those times are whole seconds, so `src/ai/align.ts` snaps each one to a real speech onset found from the audio energy, preferring longer pauses because sentence breaks have longer silences. On the demo clips this brings every start to within 0.1 s, even when the model is a second early or late.
+4. Gemini Nano scans the new transcript for claims and products, as it does for the demo clips.
+
+Limits: up to 15 minutes (clips over 7 minutes are sent at 8 kHz to stay under Gemini’s 20 MB inline request limit). A 4-minute clip costs well under a cent on Flash-Lite. If you already have captions, paste them under *Already have captions?* to skip transcription.
 
 ## 3-minute demo script
 
@@ -80,6 +91,5 @@ To edit the scripts, change `scripts/make-clips.mjs` and rerun it. To use your o
 
 ## Next steps
 
-- Add Gemini cloud transcription for uploaded clips that have no captions (audio goes in, a timestamped transcript comes out).
 - Add the TikTok embed player (it exposes playback time) for real creator content.
 - Cache verifications per claim server-side, so popular claims return instantly.
