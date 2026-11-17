@@ -11,3 +11,11 @@ media/3-upload-any-clip.jpg
 media/raw/app-upload.png
 media/raw/phone-upload-popup.png
 media/raw/phone-transcribing.png
+
+# Demo video (HyperFrames): renders, tool cache, and large/personal recordings stay local
+video/out/
+video/.hyperframes/
+video/assets/rec-upload.*
+video/assets/audio-you.wav
+video/assets/*.wav
+video/assets/*.mp4

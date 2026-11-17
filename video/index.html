@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --ground: #0b0b10;
+        --panel: #15151d;
+        --panel-2: #1c1c27;
+        --line: #2a2a38;
+        --ink: #f2f2f7;
+        --muted: #9a9aae;
+        --accent: #ff3d6e;
+        --claim: #ffb020;
+        --product: #2ee6c5;
+        --cloud: #8ab4ff;
+        --bad: #f87171;
+        --mixed: #fbbf24;
+        --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--ground); }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: var(--font-display); color: var(--ink);
+        background: radial-gradient(1100px 700px at 85% 15%, #ff3d6e1f, transparent 70%), radial-gradient(900px 700px at 10% 100%, #2ee6c517, transparent 70%), var(--ground); }
+      .clip { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+
+      /* Brand */
+      .logo { width: 96px; height: 96px; border-radius: 26px; background: var(--accent); display: grid; place-items: center; box-shadow: 0 20px 60px #ff3d6e55; }
+      .logo svg { width: 44px; height: 44px; }
+      .kicker { font-size: 26px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+
+      /* Title */
+      #title .wrap { position: absolute; left: 160px; top: 300px; width: 1600px; }
+      #title .brand { display: flex; align-items: center; gap: 28px; font-size: 76px; font-weight: 800; letter-spacing: -0.02em; }
+      #title h1 { margin-top: 56px; font-size: 104px; line-height: 1.02; letter-spacing: -0.035em; font-weight: 800; width: 1500px; }
+      #title .tag { margin-top: 44px; display: inline-block; font-size: 26px; font-weight: 700; color: #d8d8e2; padding: 12px 22px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); }
+
+      /* Problem */
+      #problem .wrap { position: absolute; left: 160px; top: 230px; width: 1600px; }
+      #problem p { font-size: 68px; line-height: 1.12; font-weight: 800; letter-spacing: -0.025em; margin-bottom: 30px; }
+      #problem p.dim { color: #8d8da3; }
+      #problem p.answer { margin-top: 70px; color: var(--ink); }
+      #problem p.answer span { color: var(--accent); }
+
+      /* Recordings */
+      .rec { overflow: hidden; }
+      .cam { position: absolute; left: 150px; top: 0; width: 1620px; height: 1080px; transform-origin: 389px 585px; }
+      .recvid { left: 150px; top: 0; width: 1620px; height: 1080px; transform-origin: 389px 585px; }
+      section.rec { z-index: 1; }
+      .scrim { position: absolute; top: 0; right: 0; width: 1300px; height: 1080px; opacity: 0;
+        background: linear-gradient(90deg, #0b0b1000 0%, #0b0b10f2 20%, #0b0b10f7 100%); }
+      .cursor { position: absolute; left: 0; top: 0; width: 34px; height: 34px; margin: -4px 0 0 -6px; filter: drop-shadow(0 3px 6px #000c); }
+      .ripple { position: absolute; left: 0; top: 0; width: 70px; height: 70px; margin: -35px 0 0 -35px; border-radius: 50%; border: 4px solid #ffffffd0; opacity: 0; }
+
+      .side { position: absolute; left: 960px; top: 300px; width: 820px; opacity: 0; }
+      .side .k { font-size: 28px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 18px; }
+      .side h2 { font-size: 64px; line-height: 1.06; letter-spacing: -0.03em; font-weight: 800; }
+      .side p { margin-top: 24px; font-size: 32px; line-height: 1.4; color: #c9c9d6; }
+      .side p b { color: var(--ink); }
+      .k-claim { color: var(--claim); } .k-product { color: var(--product); } .k-accent { color: var(--accent); } .k-cloud { color: var(--cloud); }
+      .bad { color: var(--bad); } .mixed { color: var(--mixed); }
+
+      .lower { position: absolute; left: 50%; bottom: 56px; transform: translateX(-50%); width: 1380px; opacity: 0;
+        background: #0b0b10ee; border: 1px solid #ffffff1f; border-radius: 26px; padding: 26px 40px; box-shadow: 0 20px 60px #000a; text-align: center; }
+      .lower h3 { font-size: 44px; letter-spacing: -0.02em; font-weight: 800; }
+      .lower p { margin-top: 8px; font-size: 28px; color: #c9c9d6; }
+      .badge { position: absolute; left: 60px; top: 48px; font-size: 28px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; padding: 10px 18px; border-radius: 999px; background: #0b0b10cc; border: 1px solid #ffffff22; }
+
+      /* Architecture */
+      #arch img { position: absolute; left: 150px; top: 0; width: 1620px; height: 1080px; transform-origin: 50% 50%; }
+
+      /* End */
+      #end .wrap { position: absolute; left: 0; right: 0; top: 230px; text-align: center; }
+      #end .logo { margin: 0 auto; }
+      #end h1 { margin-top: 40px; font-size: 120px; font-weight: 800; letter-spacing: -0.035em; }
+      #end .tagline { margin-top: 18px; font-size: 40px; color: #c9c9d6; }
+      #end .chips { margin-top: 56px; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+      #end .chip { font-size: 28px; font-weight: 700; padding: 12px 22px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: #d8d8e2; }
+      #end .chip i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 12px; vertical-align: 2px; }
+      #end .url { margin-top: 64px; font-size: 34px; font-weight: 700; color: var(--accent); letter-spacing: 0.01em; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="92.2" data-width="1920" data-height="1080">
+
+      <!-- 1. Title -->
+      <section id="title" class="clip" data-start="0" data-duration="4.5" data-track-index="0">
+        <div class="wrap">
+          <div class="brand t-in"><div class="logo"><svg viewBox="0 0 20 20"><path d="M6 3l11 7-11 7z" fill="#fff"/></svg></div>VidPop</div>
+          <h1 class="t-in">Check what's said in a video, at the second it's said.</h1>
+        </div>
+      </section>
+
+      <!-- 2. Problem -->
+      <section id="problem" class="clip" data-start="4.5" data-duration="5" data-track-index="0">
+        <div class="wrap">
+          <p class="p1">Short videos are full of confident claims.</p>
+          <p class="p2 dim">Checking one means pausing, leaving the app and searching.</p>
+          <p class="p3 dim">So almost nobody does.</p>
+          <p class="p4 answer">VidPop brings the answer <span>into the video.</span></p>
+        </div>
+      </section>
+
+      <!-- 3. Verify (real app recording) -->
+      <video id="v-verify" class="clip recvid" src="assets/rec-verify.mp4" muted playsinline data-start="9.5" data-duration="28.7075" data-track-index="1"></video>
+      <section id="verify" class="clip rec" data-start="9.5" data-duration="28.7075" data-track-index="0">
+        <div class="cam" data-layout-allow-overflow>
+          <div class="ripple"></div>
+          <svg class="cursor" viewBox="0 0 24 24"><path d="M4 2l16 9.5-7 1.6-3.6 6.4z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="scrim"></div>
+        <div class="badge k-claim">Verify mode · real app</div>
+        <div class="lower l1"><h3>A creator's short video, in VidPop</h3><p>Its claims were found and checked before playback.</p></div>
+        <div class="side s1"><div class="k k-claim">Verify</div><h2>Just press play.</h2><p>The dots on the timeline are the claims.</p></div>
+        <div class="side s2"><div class="k k-claim">0:05</div><h2>The claim pops up on the exact word.</h2><p>Its fact check is already done: <b class="bad">✕ Sources disagree.</b></p></div>
+        <div class="side s3"><div class="k k-cloud">One tap</div><h2>The evidence, inside the video.</h2><p>A neutral verdict, cited sources and Google Search, from <b>Gemini with Grounding with Google Search</b>.</p></div>
+        <div class="side s4"><div class="k k-claim">Keep watching</div><h2>Every claim gets its own check.</h2><p>Each one is verified in the background, so the next popup already has its verdict.</p></div>
+      </section>
+
+      <!-- 4. Your own clip (real upload of a phone video) -->
+      <video id="v-upload" class="clip recvid" src="assets/rec-upload.mp4" muted playsinline data-start="38.2075" data-duration="23.198" data-track-index="1"></video>
+      <section id="upload" class="clip rec" data-start="38.2075" data-duration="23.198" data-track-index="0">
+        <div class="cam" data-layout-allow-overflow>
+          <div class="ripple"></div>
+          <svg class="cursor" viewBox="0 0 24 24"><path d="M4 2l16 9.5-7 1.6-3.6 6.4z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="scrim"></div>
+        <div class="badge k-accent">Your own clip · real upload</div>
+        <div class="lower l1"><h3>Works on any clip: just drop it in</h3><p>Gemini Flash-Lite transcribes the audio, then the claims are found and checked automatically.</p></div>
+        <div class="side s1"><div class="k k-accent">14 seconds, filmed on a phone</div><h2>No captions. No extra clicks.</h2><p>Transcribed, scanned and fact-checked in seconds.</p></div>
+        <div class="side s2"><div class="k k-claim">0:02</div><h2>“I think 2 + 2 is 5”</h2><p>“I think” doesn't hide a checkable claim. <b class="bad">✕ Contradicted.</b></p></div>
+        <div class="side s3"><div class="k k-claim">0:04</div><h2>“Diamond is not the hardest”</h2><p>Judged in context, not on a technicality: lab-made materials can beat diamond, but the speaker means wood.</p></div>
+        <div class="side s4"><div class="k k-claim">0:10</div><h2>“Wood is the hardest material”</h2><p><b class="bad">✕ Contradicted</b>, with sources, before anyone taps.</p></div>
+      </section>
+
+      <!-- 5. Discover -->
+      <video id="v-discover" class="clip recvid" src="assets/rec-discover.mp4" muted playsinline data-start="61.4055" data-duration="10.9167" data-track-index="1"></video>
+      <section id="discover" class="clip rec" data-start="61.4055" data-duration="10.9167" data-track-index="0">
+        <div class="cam" data-layout-allow-overflow>
+          <div class="ripple"></div>
+          <svg class="cursor" viewBox="0 0 24 24"><path d="M4 2l16 9.5-7 1.6-3.6 6.4z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="scrim"></div>
+        <div class="badge k-product">Discover mode · real app</div>
+        <div class="side s1"><div class="k k-product">Discover</div><h2>Products work the same way.</h2><p>A camera mentioned at 0:03 becomes a card at 0:03.</p></div>
+        <div class="side s2"><div class="k k-product">One tap</div><h2>Search, compare or buy.</h2><p>Sponsored cards match <b>what was said, never the viewer</b>.</p></div>
+      </section>
+
+      <!-- 6. Demo store -->
+      <video id="v-store" class="clip recvid" src="assets/rec-store.mp4" muted playsinline data-start="72.3222" data-duration="5.8058" data-track-index="1"></video>
+      <section id="store" class="clip rec" data-start="72.3222" data-duration="5.8058" data-track-index="0">
+        <div class="cam" data-layout-allow-overflow>
+          <div class="ripple"></div>
+          <svg class="cursor" viewBox="0 0 24 24"><path d="M4 2l16 9.5-7 1.6-3.6 6.4z" fill="#fff" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="lower l1"><h3>A demo advertiser's store</h3><p>120 fictional products. The click carries the product, not the viewer, and no payment is taken.</p></div>
+      </section>
+
+      <!-- 7. Architecture -->
+      <section id="arch" class="clip" data-start="78.128" data-duration="8" data-track-index="0">
+        <img src="assets/architecture.jpg" alt="" />
+      </section>
+
+      <!-- 8. End -->
+      <section id="end" class="clip" data-start="86.128" data-duration="6.072" data-track-index="0">
+        <div class="wrap">
+          <div class="logo e-in"><svg viewBox="0 0 20 20"><path d="M6 3l11 7-11 7z" fill="#fff"/></svg></div>
+          <h1 class="e-in">VidPop</h1>
+          <div class="tagline e-in">Search, discover and verify, at the exact moment it's said.</div>
+          <div class="chips e-in">
+            <span class="chip"><i style="background: var(--product)"></i>Gemini Nano on-device</span>
+            <span class="chip"><i style="background: var(--cloud)"></i>Gemini + Grounding with Google Search</span>
+            <span class="chip"><i style="background: var(--accent)"></i>Firebase AI Logic</span>
+          </div>
+          <div class="url e-in">github.com/kaiji123/vidpop</div>
+        </div>
+      </section>
+
+      <!-- Audio: each clip's own sound, placed where the recording plays it -->
+      <audio id="a-myth-1" src="assets/audio-myth.wav" data-start="11.0" data-duration="7.3" data-media-start="0" data-fade-in="0.03" data-fade-out="0.08" data-track-index="2"></audio>
+      <audio id="a-myth-2" src="assets/audio-myth.wav" data-start="26.7075" data-duration="10.9" data-media-start="7.3" data-fade-in="0.08" data-fade-out="0.3" data-track-index="2"></audio>
+      <audio id="a-you-1" src="assets/audio-you.wav" data-start="43.0006" data-duration="3.4" data-media-start="0" data-volume="2.2" data-fade-in="0.03" data-fade-out="0.08" data-track-index="2"></audio>
+      <audio id="a-you-2" src="assets/audio-you.wav" data-start="50.3055" data-duration="10.6" data-media-start="3.4" data-volume="2.2" data-fade-in="0.08" data-fade-out="0.3" data-track-index="2"></audio>
+      <audio id="a-tokyo-1" src="assets/audio-tokyo.wav" data-start="62.5056" data-duration="5.6" data-media-start="0" data-fade-in="0.03" data-fade-out="0.25" data-track-index="2"></audio>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const S = 1.125; // recording viewport px -> composition px
+      const REST = { x: 1300 * S, y: 900 * S };
+
+      // ---- Title & problem ----
+      tl.fromTo("#title .wrap", { scale: 0.985 }, { scale: 1, duration: 4.1, ease: "none", transformOrigin: "0% 50%" }, 0);
+      tl.to("#title .wrap", { opacity: 0, y: -30, duration: 0.35, ease: "power2.in" }, 4.15);
+      ["p1", "p2", "p3", "p4"].forEach((c, i) => tl.from(`#problem .${c}`, { opacity: 0, y: 30, duration: 0.5, ease: "power3.out" }, 4.6 + [0, 0.8, 1.6, 2.3][i]));
+      tl.to("#problem .wrap", { opacity: 0, duration: 0.3 }, 9.2);
+
+      // ---- Recording helpers ----
+      function cursorPath(sel, t0, events) {
+        const cur = `${sel} .cursor`, rip = `${sel} .ripple`;
+        tl.set(cur, { x: REST.x, y: REST.y, opacity: 1 }, t0);
+        let last = t0;
+        for (const e of events) {
+          const at = t0 + e.t;
+          const moveStart = Math.max(last, at - 0.7);
+          tl.to(cur, { x: e.x * S, y: e.y * S, duration: Math.max(0.15, at - moveStart - 0.05), ease: "power2.inOut" }, moveStart);
+          if (e.click) {
+            tl.to(cur, { scale: 0.82, duration: 0.08, yoyo: true, repeat: 1, transformOrigin: "6px 4px" }, at);
+            tl.set(rip, { x: e.x * S, y: e.y * S, scale: 0.4, opacity: 0.9 }, at);
+            tl.to(rip, { scale: 1.6, opacity: 0, duration: 0.45, ease: "power2.out" }, at);
+          }
+          last = at + 0.05;
+        }
+      }
+      // The recording (#v-name) and its cursor layer (.cam) share size and origin, so they zoom together.
+      function zoom(sel, at, to, dur = 0.8) {
+        tl.to([`${sel} .cam`, `#v-${sel.slice(1)}`], { scale: to, duration: dur, ease: "power3.inOut" }, at);
+        tl.to(`${sel} .scrim`, { opacity: to > 1 ? 1 : 0, duration: dur, ease: "power2.inOut" }, at);
+      }
+      function show(target, from, to) {
+        tl.fromTo(target, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, from);
+        tl.to(target, { opacity: 0, y: -16, duration: 0.3, ease: "power2.in" }, to - 0.3);
+      }
+      function lower(target, from, to) {
+        tl.fromTo(target, { opacity: 0, y: 30, xPercent: -50 }, { opacity: 1, y: 0, xPercent: -50, duration: 0.45, ease: "power3.out" }, from);
+        tl.to(target, { opacity: 0, y: 20, xPercent: -50, duration: 0.3 }, to - 0.3);
+      }
+      function sceneIn(sel, at) { tl.from([sel, `#v-${sel.slice(1)}`], { opacity: 0, duration: 0.35 }, at); tl.from(`${sel} .badge`, { opacity: 0, y: -14, duration: 0.4 }, at + 0.2); }
+
+      // ---- 3. Verify (t0 = 9.5) ----
+      const V0 = 9.5;
+      sceneIn("#verify", V0);
+      cursorPath("#verify", V0, [
+        { t: 1.5, x: 346, y: 520, click: true },
+        { t: 8.8, x: 404, y: 256, click: true },
+        { t: 11.708, x: 346, y: 696, click: true },
+        { t: 13.409, x: 346, y: 645 },
+        { t: 16.806, x: 505, y: 384, click: true },
+        { t: 18.2, x: 470, y: 760 },
+      ]);
+      lower("#verify .l1", V0 + 0.2, V0 + 3.5);
+      zoom("#verify", V0 + 3.0, 1.2);
+      show("#verify .s1", V0 + 3.6, V0 + 7.1);
+      show("#verify .s2", V0 + 7.2, V0 + 10.9);
+      show("#verify .s3", V0 + 11.1, V0 + 16.7);
+      show("#verify .s4", V0 + 17.4, V0 + 28.7);
+
+      // ---- 4. Upload (t0 = 38.2075) ----
+      const U0 = 38.2075;
+      sceneIn("#upload", U0);
+      cursorPath("#upload", U0, [
+        { t: 1.005, x: 932, y: 720, click: true },
+        { t: 3.6, x: 1250, y: 880 },
+        { t: 4.793, x: 346, y: 520, click: true },
+        { t: 8.193, x: 348, y: 248, click: true },
+        { t: 11.697, x: 505, y: 490, click: true },
+        { t: 13.2, x: 470, y: 780 },
+      ]);
+      lower("#upload .l1", U0 + 0.2, U0 + 4.2);
+      zoom("#upload", U0 + 4.0, 1.2);
+      show("#upload .s1", U0 + 4.6, U0 + 8.1);
+      show("#upload .s2", U0 + 8.3, U0 + 11.8);
+      show("#upload .s3", U0 + 12.6, U0 + 18.9);
+      show("#upload .s4", U0 + 19.2, U0 + 23.2);
+
+      // ---- 5. Discover (t0 = 61.4055) ----
+      const D0 = 61.4055;
+      sceneIn("#discover", D0);
+      cursorPath("#discover", D0, [
+        { t: 1.1, x: 346, y: 520, click: true },
+        { t: 6.7, x: 398, y: 248, click: true },
+        { t: 9.008, x: 462, y: 756 },
+      ]);
+      zoom("#discover", D0 + 0.3, 1.2, 0.7);
+      show("#discover .s1", D0 + 0.9, D0 + 6.2);
+      show("#discover .s2", D0 + 6.4, D0 + 10.9);
+
+      // ---- 6. Store (t0 = 72.3222) ----
+      const T0 = 72.3222;
+      tl.from(["#store", "#v-store"], { opacity: 0, duration: 0.3 }, T0);
+      cursorPath("#store", T0, [
+        { t: 1.501, x: 937, y: 588, click: true },
+        { t: 2.702, x: 937, y: 526, click: true },
+      ]);
+      lower("#store .l1", T0 + 0.3, T0 + 5.8);
+
+      // ---- 7. Architecture ----
+      tl.from("#arch", { opacity: 0, duration: 0.4 }, 78.128);
+      tl.fromTo("#arch img", { scale: 1.0 }, { scale: 1.07, duration: 8, ease: "none" }, 78.128);
+
+      // ---- 8. End ----
+      tl.from("#end .e-in", { opacity: 0, y: 30, duration: 0.6, stagger: 0.15, ease: "power3.out" }, 86.3);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
